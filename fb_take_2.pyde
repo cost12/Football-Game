@@ -5546,34 +5546,7 @@ class Player(object):
     def change_overall(self, amount):
         if amount + self.overall(True) > 99:
             amount = 99 - self.overall(True)
-        self.upgrade_player("injury", amount, "NORMAL", False)
-        self.upgrade_player("block chance", amount, "NORMAL", False)
-        self.upgrade_player("sack allowed chance", amount, "NORMAL", False)
-        self.upgrade_player("int throw", amount, "NORMAL", False)
-        self.upgrade_player("complete chance", amount, "NORMAL", False)
-        self.upgrade_player("air yds throw", amount, "NORMAL", False)
-        self.upgrade_player("fumble chance", amount, "NORMAL", False)
-        self.upgrade_player("drop chance", amount, "NORMAL", False)
-        self.upgrade_player("target dist", amount, "NORMAL", False)
-        self.upgrade_player("yac", amount, "NORMAL", False)
-        self.upgrade_player("run dist", amount, "NORMAL", False)
-        self.upgrade_player("air yds allowed", amount, "NORMAL", False)
-        self.upgrade_player("int catch chance", amount, "NORMAL", False)
-        self.upgrade_player("complete chance allowed", amount, "NORMAL", False)
-        self.upgrade_player("yac allowed", amount, "NORMAL", False)
-        self.upgrade_player("sack chance", amount, "NORMAL", False)
-        self.upgrade_player("blocked chance", amount, "NORMAL", False)
-        self.upgrade_player("run dist allowed", amount, "NORMAL", False)
-        self.upgrade_player("ff chance", amount, "NORMAL", False)
-        self.upgrade_player("fg range", amount, "NORMAL", False)
-        self.upgrade_player("fg made chance", amount, "NORMAL", False)
-        self.upgrade_player("punt dist", amount, "NORMAL", False)
-        self.upgrade_player("kick return dist", amount, "NORMAL", False)
-        self.upgrade_player("tb forced chance", amount, "NORMAL", False)
-        self.upgrade_player("pin chance", amount, "NORMAL", False)
-        self.upgrade_player("kick return dist", amount, "NORMAL", False)
-        self.upgrade_player("tb chance", amount, "NORMAL", False)
-        self.upgrade_player("onside kick", amount, "NORMAL", False)
+        self.upgrade_player("all", amount, "NORMAL", False)
     
     def end_season(self):
         global season1, use_overall
@@ -6200,75 +6173,75 @@ class Player(object):
             up_amount *= amount
             if ovr > 98 and up_amount > 1:
                 up_amount = 1
-            if type == "injury":
+            if type == "injury" or type == "all":
                 if not use_xp:
                     self.injury_chance -= c.injury_jump*up_amount
                 if self.injury_chance <= 0.0001:
                     self.injury_chance = 0.0001
-            elif type == "block chance":
+            elif type == "block chance" or type == "all":
                 self.block_chance += c.block_jump*up_amount
-            elif type == "sack allowed chance":        
+            elif type == "sack allowed chance" or type == "all":        
                 self.sack_allowed_chance -= c.sack_jump*up_amount
-            elif type == "int throw":
+            elif type == "int throw" or type == "all":
                 self.int_chance -= c.int_jump*up_amount
-            elif type == "complete chance":
+            elif type == "complete chance" or type == "all":
                 self.complete_chance += c.complete_jump*up_amount
-            elif type == "air yds throw":
+            elif type == "air yds throw" or type == "all":
                 self.air_yds_throw += c.air_yds_jump*up_amount
-            elif type == "fumble chance":
+            elif type == "fumble chance" or type == "all":
                 self.fumble_chance -= c.fumble_jump*up_amount
-            elif type == "drop chance":
+            elif type == "drop chance" or type == "all":
                 if self.drop_chance <= 0.01:
                     self.xp += cost
                 else:
                     self.drop_chance -= c.drop_jump*up_amount
                 if self.drop_chance <= 0.01:
                     self.drop_chance = 0.01
-            elif type == "target dist":
+            elif type == "target dist" or type == "all":
                 self.target_dist += c.air_yds_jump*up_amount
-            elif type == "yac":
+            elif type == "yac" or type == "all":
                 self.YAC += c.YAC_jump*up_amount
-            elif type == "run dist":
+            elif type == "run dist" or type == "all":
                 self.run_dist += c.run_jump*up_amount
-            elif type == "air yds allowed":
+            elif type == "air yds allowed" or type == "all":
                 self.air_yds_allowed -= c.air_yds_jump*up_amount
-            elif type == "int catch chance":
+            elif type == "int catch chance" or type == "all":
                 self.int_catch_chance += c.int_jump*up_amount
-            elif type == "complete chance allowed":
+            elif type == "complete chance allowed" or type == "all":
                 self.complete_chance_allowed -= c.complete_jump*up_amount
-            elif type == "yac allowed":
+            elif type == "yac allowed" or type == "all":
                 self.YAC_allowed -= c.YAC_jump*up_amount
-            elif type == "sack chance":
+            elif type == "sack chance" or type == "all":
                 self.sack_chance += c.sack_jump*up_amount
-            elif type == "blocked chance":
+            elif type == "blocked chance" or type == "all":
                 self.blocked_chance -= c.block_jump*up_amount
-            elif type == "run dist allowed":
+            elif type == "run dist allowed" or type == "all":
                 self.run_dist_allowed -= c.run_jump*up_amount
-            elif type == "ff chance":
+            elif type == "ff chance" or type == "all":
                 self.ff_chance += c.fumble_jump*up_amount
-            elif type == "fg range":
-                if self.fg_range > 64:
+            elif type == "fg range" or type == "all":
+                if self.fg_range > 66:
                     self.xp += cost
                 else:
                     self.fg_range += c.fg_range_jump*up_amount
-            elif type == "fg made chance":
+            elif type == "fg made chance" or type == "all":
                 self.fg_made_chance += c.fg_chance_jump*up_amount
-            elif type == "punt dist":
+            elif type == "punt dist" or type == "all":
                 if self.punt_dist > 69:
                     self.xp+= cost
                 else:
                     self.punt_dist += c.punt_jump*up_amount
-            elif type == "kick return allowed":
+            elif type == "kick return allowed" or type == "all":
                 self.kick_return_allowed -= c.return_jump*up_amount
-            elif type == "tb forced chance":
+            elif type == "tb forced chance" or type == "all":
                 self.touchback_forced_chance += c.touchback_jump*up_amount
-            elif type == "pin chance":
+            elif type == "pin chance" or type == "all":
                 self.pin_chance += c.pin_jump*up_amount
-            elif type == "kick return dist":
+            elif type == "kick return dist" or type == "all":
                 self.kick_return_dist += c.return_jump*up_amount
-            elif type == "tb chance":
+            elif type == "tb chance" or type == "all":
                 self.touchback_chance -= c.touchback_jump*up_amount
-            elif type == "onside kick":
+            elif type == "onside kick" or type == "all":
                 self.onside_kick_chance += c.onside_jump*up_amount
             else:
                 println("ERROR in upgrade player: " + type)
@@ -10185,13 +10158,13 @@ class Constants(object):
         elif pos == "WR":
             multip = 2.000
         elif pos == "RB":
-            multip = 1.300
-        elif pos == "TE":
-            multip = 1.300
-        elif pos == "OL":
-            multip = 4.000
-        elif pos == "DL":
             multip = 2.000
+        elif pos == "TE":
+            multip = 1.500
+        elif pos == "OL":
+            multip = 5.000
+        elif pos == "DL":
+            multip = 2.300
         elif pos == "LB":
             multip = 0.700
         elif pos == "DB":
