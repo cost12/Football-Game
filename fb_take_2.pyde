@@ -10,16 +10,26 @@ import math
     # fas blind bids
     # competitive trading
     # load to/from files
+    # max 115 ovr per attribute
+    # better aging for out of position attributes
+    # color scheme
+    # 2 years of draft picks available
+    # shorter punt returns
+    # lower draft overalls
+    # add in transition overall - temporarily lose overall, but can gain it back by playing or being on bench behind veteran
+    
 
 
 def settings():
     global first_names, last_names, c
-    global game1, draft1, draft_sort, season1, fa_sort, fa_price, team_sort_type, team_sort_reverse, team_schedule, ls
+    global game1, draft1, draft_sort, season1, fa_sort, fa_price, team_sort_type, team_sort_reverse, team_schedule, ls, only_rookies
     global scroll, side_scroll, current_screen, is_first_season, auto_draft_end
     global all_teams, home_team, away_team, afc_e, afc_n, afc_s, afc_w, nfc_e, nfc_n, nfc_s, nfc_w, user_teams, user_team_number, team_phase
     global player_team, view_as
     global buttons, user_overall, scouting, user_cap
+    global use_overall
     size(1920, 1000)
+    only_rookies = False
     view_as = "NONE"
     team_schedule = "NONE"
     team_sort_type = 0
@@ -40,6 +50,7 @@ def settings():
     user_team_number = 1
     scouting = "TOP RED"
     user_cap = 200000000
+    use_overall = True
     #                  x    y     w  h   t            d    c
     buttons = [Button(100, 120, 200, 50, "Very High", 85, "DIFFICULTY OVR"),       Button(100, 170, 200, 50, "High", 80, "DIFFICULTY OVR"),               Button(100, 220, 200, 50, "Normal", 75, "DIFFICULTY OVR"),              Button(100, 270, 200, 50, "Low", 70, "DIFFICULTY OVR"),                  Button(100, 320, 200, 50, "Very Low", 55, "DIFFICULTY OVR"),           Button(100, 370, 200, 50, "Mega Draft", 0, "DIFFICULTY OVR"),
                Button(500, 120, 200, 50, "None", "NONE", "DIFFICULTY DRAFT"),      Button(500, 170, 200, 50, "Full Red", "FULL RED", "DIFFICULTY DRAFT"), Button(500, 220, 200, 50, "Top Red", "TOP RED", "DIFFICULTY DRAFT"),    Button(500, 270, 200, 50, "Full Blue", "FULL BLUE", "DIFFICULTY DRAFT"), Button(500, 320, 200, 50, "Top Blue", "TOP BLUE", "DIFFICULTY DRAFT"),
@@ -81,7 +92,7 @@ def settings():
     afc_w = [chiefs, chargers, raiders, broncos]
     
     giants = Team("Giants", "New York", "NYG")
-    the_team = Team("Football Team", "Washington", "WFT")
+    the_team = Team("Commanders", "Washington", "WAS")
     eagles = Team("Eagles", "Philadelphia", "PHI")
     cowboys = Team("Cowboys", "Dallas", "DAL")
     nfc_e = [giants, the_team, eagles, cowboys]
@@ -108,7 +119,7 @@ def settings():
             
 def draw():
     global game1, draft1, all_teams, home_team, season1, user_teams, user_team_number, team_phase, player_team, team_sort_type, team_sort_reverse, team_schedule, ls, fa_price, fa_sort
-    global buttons, auto_draft_end, scroll, side_scroll
+    global buttons, auto_draft_end, scroll, side_scroll, only_rookies
     background(100)
     if current_screen == "LEAGUE STATS":
         __draw_league_stats()
@@ -136,7 +147,7 @@ def draw():
     elif current_screen == "CHOOSE DIFFICULTY":
         __draw_choose_diffuculty(buttons)
     elif current_screen == "FREE AGENTS":
-        season1.free_agents.draw_free_agents(side_scroll, scroll, fa_sort, fa_price)
+        season1.free_agents.draw_free_agents(side_scroll, scroll, fa_sort, fa_price, only_rookies)
     elif current_screen in {"TRADE CENTER", "TRADE BLOCK", "RECENT TRADES", "PROPOSE TRADE", "MY TRADES", "TRADE OVERVIEW", "TEAM TRADEABLES"}:
         __draw_trade_center(current_screen)
     elif current_screen == "CHOOSE GAME":
@@ -285,7 +296,10 @@ def __draw_season_screen():
     rect(1000, 250, 100, 100, 7)
     fill(0)
     textSize(30)
-    text(str(season1.this_year) + " Week " + str(season1.current_week + 1), 1000, 50)
+    if season1.current_week == season1.resign_week:
+        text(str(season1.this_year) + " Resign Week", 1000, 50)
+    else:
+        text(str(season1.this_year) + " Week " + str(season1.current_week + 1), 1000, 50)
     textSize(15)
     text(" VIEW TEAM", 1000, 250, 100, 100)
     textSize(13)
@@ -348,12 +362,14 @@ def __draw_season_screen():
     rect(1000, 550, 100, 100, 7)
     fill(0)
     text("TRADE CENTER", 1000, 550, 100, 100)
+    """
     if season1.current_week > 0 and season1.current_week < season1.wildcard_week:
         ls.draw_leaders_ffp("GAME", ls.this_year, 1300, 100, 3, False)
     elif season1.current_week <= 0:
         ls.draw_leaders_ffp("SEASON", ls.this_year-1, 1300, 100, 3, False)
     elif season1.current_week >= season1.wildcard_week:
         ls.draw_leaders_ffp("SEASON", ls.this_year, 1300, 100, 3, False)
+    """
                 
 def __draw_team_screen():
     global afc_e, afc_s, afc_n, afc_w, nfc_e, nfc_s, nfc_n, nfc_w
@@ -370,7 +386,7 @@ def __draw_team_screen():
         temp[i].draw_team_summary(5 + (i % 4) * 200, 5 + (i / 4) * 200 + scroll)
     
 def mouseClicked():
-    global game1, draft1, draft_sort, all_teams, first_draft, home_team, away_team, afc_e, afc_n, afc_s, afc_w, nfc_e, nfc_n, nfc_s, nfc_w, season1, is_first_season, user_teams, user_team_number, team_phase, player_team, team_sort_type, team_sort_reverse, team_schedule, fa_sort, fa_price, ls, user_overall, buttons, scouting, user_cap, scroll, side_scroll, view_as
+    global game1, draft1, draft_sort, all_teams, first_draft, home_team, away_team, afc_e, afc_n, afc_s, afc_w, nfc_e, nfc_n, nfc_s, nfc_w, season1, is_first_season, user_teams, user_team_number, team_phase, player_team, team_sort_type, team_sort_reverse, team_schedule, fa_sort, fa_price, ls, user_overall, buttons, scouting, user_cap, scroll, side_scroll, view_as, only_rookies
     if  not (current_screen == "HOME" or current_screen == "CHOOSE YOUR TEAM" or (current_screen == "GAME" and not game1.game_over)):
         clicked = button_clicked(mouseX, mouseY, buttons, "NAVIGATION", "NONE")
         if not clicked == "":
@@ -421,15 +437,16 @@ def mouseClicked():
         x = mouseX / 200
         y = (mouseY - scroll) / 200
         team_num = 6*y + x
-        if team_num < len(all_teams) and x < 6:
+        if team_num < len(all_teams) and x < 6 and y >= 0:
             #if all_teams.index(home_team) <= team_num:
-            team_num += 1
+            #team_num += 1
             away_team = all_teams[team_num]
             #else:
             #away_team = all_teams[team_num]
-            game1 = Game(home_team, away_team, "PRE SEASON", 0)
-            game1.play_game()
-            change_screen("GAME")
+            if (not (home_team == away_team)):    
+                game1 = Game(home_team, away_team, "PRE SEASON", 0)
+                game1.play_game()
+                change_screen("GAME")
     elif current_screen == "SEASON":
         season1.clicked(mouseX, mouseY)
         if mouseX > 1000 and mouseX < 1100 and mouseY > 100 and mouseY < 200:
@@ -528,9 +545,9 @@ def mouseClicked():
                 all_teams.sort(key = by_team_overall, reverse = False)
                 if mega_draft:
                     r.shuffle(all_teams)
-                    set_draft_picks(all_teams, 53, True)
+                    set_draft_picks(all_teams, 53, True, 1966)
                 else:
-                    set_draft_picks(all_teams, 7, False)
+                    set_draft_picks(all_teams, 7, False, 1966)
                 season1 = Season(all_teams, afc_e, afc_n, afc_s, afc_w, nfc_e, nfc_n, nfc_s, nfc_w, [afc_e, afc_n, afc_s, afc_w], [nfc_e, nfc_s, nfc_n, nfc_w], ["AFC", "NFC"], FreeAgents([Player("OL", 55)]), 1966, mega_draft)
                 is_first_season = False
                 for i in range(0, user_team_number):
@@ -556,6 +573,8 @@ def mouseClicked():
         if clicked == "CONTINUE":
             change_screen("CHOOSE YOUR TEAM")
     elif is_team(current_screen):
+        if "TOGGLE" == button_clicked(mouseX, mouseY, current_screen.buttons, "ALL", "FLIP"):
+            current_screen.show_overall = not current_screen.show_overall
         x = mouseX - side_scroll
         y = mouseY - scroll
         if x > 400 and x < 450 and y > -75 and y < -25:
@@ -568,7 +587,7 @@ def mouseClicked():
             team_phase = "DEFENSE"
         elif x > 900 and x < 1050 and y > -75 and y < -25:
             team_phase = "SPECIAL"
-        elif x > 1050 and x < 1100 and y > -75 and y < 25:
+        elif x > 1050 and x < 1100 and y > -75 and y < -25:
             team_phase = "NUMBERS"
         elif team_phase == "MORE":
             if y > 35 and y < 60:
@@ -628,7 +647,7 @@ def mouseClicked():
             player_num = 9 * int(y / 175) 
             player_num += int(x / 150)
             if player_num >= 0 and player_num < len(season1.free_agents.players):
-                if fa_sort == "NONE" and fa_price >= 200000000:
+                if fa_sort == "NONE" and fa_price >= 200000000 and only_rookies == False:
                     bid = min(season1.free_agents.players[player_num].min_contract(), user_teams[user_team_number].max_offer)
                     if season1.free_agents.bids[player_num][0] >= bid:
                         bid = min(season1.free_agents.bids[player_num][0] + 500000, user_teams[user_team_number].max_offer)
@@ -642,7 +661,7 @@ def mouseClicked():
                     count = -1
                     i = 0
                     for player in season1.free_agents.players:
-                        if player.position == fa_sort and fa_price >= max(season1.free_agents.bids[i][0], player.min_contract()):
+                        if player.position == fa_sort and fa_price >= max(season1.free_agents.bids[i][0], player.min_contract()) and (player.years_played == 0 or not only_rookies):
                             count += 1
                             if count == player_num:
                                 i = season1.free_agents.players.index(player)
@@ -714,7 +733,7 @@ def player_clicked(mouse_x, mouse_y, player_team, current_screen, user_teams, us
     current_screen.player_clicked(side_scroll, scroll, player_team, season1, mouse_x, mouse_y, pos)
                         
 def keyPressed():
-    global game1, draft1, draft_sort, home_team, away_team, fa_sort, fa_price
+    global game1, draft1, draft_sort, home_team, away_team, fa_sort, fa_price, only_rookies
     global season1, all_teams, auto_draft_end, scroll, side_scroll
         
     if keyCode == UP:
@@ -740,6 +759,9 @@ def keyPressed():
             draft_sort = "RB"
         elif current_screen == "FREE AGENTS":
             fa_sort = "RB"
+    if key == "1":
+        if current_screen == "FREE AGENTS":
+            only_rookies = not only_rookies
     if key == "2":
         if current_screen == "GAME":
             while game1.quarter < 2:
@@ -908,8 +930,8 @@ def random_ovr_from_age(age, skew = 0):
     proj_ovr = 55
     ovr = 55
     if age <= 23:
-        proj_ovr = min_max_skew(50+skew, 78+skew)
-        ovr = min(random_skew(proj_ovr, 5), 85+skew)
+        proj_ovr = min_max_skew(45+skew, 73+skew)
+        ovr = min(random_skew(proj_ovr, 4), 80+skew)
     elif age <= 26:
         proj_ovr = min_max_skew(60+skew, 88+skew)
         ovr = min(random_skew(proj_ovr, 5), 95+skew)
@@ -944,7 +966,7 @@ def random_starting_age():
         return int(random(30, 36))
         
 def make_user_pick(draft1, mouse_x, mouse_y, side_scroll, scroll):
-    global user_teams, user_team_number
+    global user_teams, user_team_number, use_overall
     if not draft1.current_team == user_teams[user_team_number]:
         return
     x = mouse_x - 10 - side_scroll
@@ -965,12 +987,13 @@ def make_user_pick(draft1, mouse_x, mouse_y, side_scroll, scroll):
             draft1.set_pick(1)
                 
 def make_auto_pick(draft1, auto_user):
+    global use_overall
     if draft1.current_team.user_type == "BEST" and not draft1.is_done:
         #draft1.sort_by("OVERALL", 250)
-        best_ovr = draft1.players[i].overall()
+        best_ovr = draft1.players[i].overall(use_overall)
         best_ind = 0
         for i in range(1, len(draft1.players)):
-            ovr = draft1.players[i].overall()
+            ovr = draft1.players[i].overall(use_overall)
             if ovr > best_ovr:
                best_ovr = ovr
                best_ind = i
@@ -988,7 +1011,7 @@ def make_auto_pick(draft1, auto_user):
         draft1.sign_player(draft1.players[best_ind])
         draft1.set_pick(1)
 
-def set_draft_picks(teams_in_order, rounds, snake):
+def set_draft_picks(teams_in_order, rounds, snake, this_year):
     pick_num = 0
     order = []
     for team in teams_in_order:
@@ -1001,7 +1024,7 @@ def set_draft_picks(teams_in_order, rounds, snake):
         for k in range(0, 32):                                   # for each pick in the round
             for team in teams_in_order:                          # find the team who has the next pick
                 for pick in team.draft_picks:                    # find the next pick
-                    if pick[0] == i + 1 and pick[1] == order[k]: 
+                    if pick[0] == i + 1 and pick[1] == order[k] and pick[2] == this_year: 
                         pick[1] = k + 1                          # set the pick
 
 def button_draw(buttons, category):
@@ -1020,6 +1043,8 @@ def button_clicked(mouse_x, mouse_y, buttons, category, highlight_type):
                     button.highlight = True
                 elif highlight_type == "INCLUSIVE" and not button.do == "BUFFER":
                     button.highlight = True
+                elif highlight_type == "FLIP":
+                    button.highlight = not button.highlight
                 return button.do
     return ""
 
@@ -1100,10 +1125,11 @@ def by_contract_amount(player):
         return -1
 
 def by_overall(player, pos = "NONE"):
+    global use_overall
     try:
         if pos == "NONE":
             pos = player.position
-        return player.get_overall(pos)
+        return player.get_overall(pos, use_overall)
     except:
         return -1
     
@@ -1274,6 +1300,7 @@ def grid(column_sizes, row_height, rows, x, y):
         line(x, y + row_height*row, x + x_add, y + row_height*row)   
         
 def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_min_max, highlighting = False, column_highlight = False):
+    global use_overall
     headers = ["Year", "Name", "Pos", "Ovr", "Team", "Rating"]
     column_sizes = [75, 125, 75, 75, 75, 75]
     row_height = 20
@@ -1353,7 +1380,7 @@ def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_
         headers.extend(add_to_headers)
         for i in range(0, len(stats_to_show)):
             column_sizes.append(75)
-        bottom_row = ["CAREER", player.name(), player.position, player.overall(), player.team, str(player.get_stat_rating("CAREER", stat_type, this_year)) + "don't round"]
+        bottom_row = ["CAREER", player.name(), player.position, player.overall(use_overall), player.team, str(player.get_stat_rating("CAREER", stat_type, this_year)) + "don't round"]
         for stat in stats_to_show:
             bottom_row.append(player.career_stats.get_stat("CAREER", stat, this_year))
         for j in indices_to_not_round:
@@ -1362,7 +1389,7 @@ def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_
         for a_year in range(player.draft_position[2], this_year + 1):
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", a_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", a_year)
                 tm = player.team
@@ -1385,7 +1412,7 @@ def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_
         for a_year in range(player.draft_position[2], this_year + 1):
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", a_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", a_year)
                 tm = player.team
@@ -1404,14 +1431,14 @@ def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_
         for a_year in range(player.draft_position[2], this_year + 1):
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", a_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", a_year)
                 tm = player.team
                 if not player.career_stats.get_stat(scope, "TEAM", a_year) == 0:
                     tm = player.career_stats.get_stat(scope, "TEAM", a_year)
-                table_rows[i] = [ a_year, player.name(), player.position, ovr, tm, 0, 0, 0, player.get_overall("QB"), player.get_overall("RB"), 
-                                  player.get_overall("WR"), player.get_overall("TE"), player.get_overall("OL"), player.get_overall("DL"), player.get_overall("LB"), player.get_overall("DB"), player.get_overall("K"), player.get_overall("RT") ]
+                table_rows[i] = [ a_year, player.name(), player.position, ovr, tm, 0, 0, 0, player.get_overall("QB", use_overall), player.get_overall("RB", use_overall), 
+                                  player.get_overall("WR", use_overall), player.get_overall("TE", use_overall), player.get_overall("OL", use_overall), player.get_overall("DL", use_overall), player.get_overall("LB", use_overall), player.get_overall("DB", use_overall), player.get_overall("K", use_overall), player.get_overall("RT", use_overall) ]
             else:
                 table_rows[i] = [ a_year, player.name(), "TEAM", player.get_team_overall(), player.abbreviation, player.offense, player.defense, player.special, player.qb, player.rb, player.wr, player.te, player.ol,
                                   player.dl, player.lb, player.db, player.k_ovr, player.rt_ovr ]
@@ -1426,7 +1453,7 @@ def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_
         for a_year in range(player.draft_position[2], this_year + 1):
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", a_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", a_year)
                 tm = player.team
@@ -1448,7 +1475,7 @@ def make_career_table(stat_type, scope, this_year, player, x, y, sort_index, is_
         for a_year in range(player.draft_position[2], this_year + 1):
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", a_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", a_year)
                 tm = player.team
@@ -1492,7 +1519,7 @@ def make_stats_table(stat_type, scope, this_year, players_to_include, x, y, sort
     make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, sort_index, is_min_max, max_len, False, False)
                         
 def make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, sort_index, is_min_max, max_len, highlighting, column_highlight):
-    global user_teams, user_team_number
+    global user_teams, user_team_number, use_overall
     headers = ["Name", "Pos", "Ovr", "Team", "Rating"]
     column_sizes = [125, 75, 75, 75, 75]
     row_height = 20
@@ -1581,7 +1608,7 @@ def make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, so
         for player in players_to_include:
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", this_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", this_year)
                 tm = player.team
@@ -1604,7 +1631,7 @@ def make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, so
         for player in players_to_include:
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", this_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", this_year)
                 tm = player.team
@@ -1623,14 +1650,14 @@ def make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, so
         for player in players_to_include:
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", this_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", this_year)
                 tm = player.team
                 if not player.career_stats.get_stat(scope, "TEAM", this_year) == 0:
                     tm = player.career_stats.get_stat(scope, "TEAM", this_year)
-                table_rows[i] = [ player.name(), player.position, ovr, tm, 0, 0, 0, player.get_overall("QB"), player.get_overall("RB"), 
-                                  player.get_overall("WR"), player.get_overall("TE"), player.get_overall("OL"), player.get_overall("DL"), player.get_overall("LB"), player.get_overall("DB"), player.get_overall("K"), player.get_overall("RT") ]
+                table_rows[i] = [ player.name(), player.position, ovr, tm, 0, 0, 0, player.get_overall("QB", use_overall), player.get_overall("RB", use_overall), 
+                                  player.get_overall("WR", use_overall), player.get_overall("TE", use_overall), player.get_overall("OL", use_overall), player.get_overall("DL", use_overall), player.get_overall("LB", use_overall), player.get_overall("DB", use_overall), player.get_overall("K", use_overall), player.get_overall("RT", use_overall) ]
             else:
                 table_rows[i] = [ player.name(), "TEAM", player.get_team_overall(), player.abbreviation, player.offense, player.defense, player.special, player.qb, player.rb, player.wr, player.te, player.ol,
                                   player.dl, player.lb, player.db, player.k_ovr, player.rt_ovr ]
@@ -1645,7 +1672,7 @@ def make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, so
         for player in players_to_include:
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", this_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", this_year)
                 tm = player.team
@@ -1667,7 +1694,7 @@ def make_stats_table_h(stat_type, scope, this_year, players_to_include, x, y, so
         for player in players_to_include:
             table_rows.append([])
             if is_player(player):
-                ovr = player.overall()
+                ovr = player.overall(use_overall)
                 if not player.career_stats.get_stat(scope, "OVERALL", this_year) == 0:
                     ovr = player.career_stats.get_stat(scope, "OVERALL", this_year)
                 tm = player.team
@@ -1782,7 +1809,7 @@ class Season(object):
         self.afc_conf_ranked = afc_conf_ranked
         self.nfc_conf_ranked = nfc_conf_ranked
         self.schedule = self.make_schedule()
-        self.current_week = -3
+        self.current_week = -4
         self.afc_playoffs = []
         self.nfc_playoffs = []
         self.ready_to_sim = True
@@ -1797,6 +1824,7 @@ class Season(object):
         self.buttons[0].hide()
         self.buttons[1].hide()
         #self.games = 17
+        self.resign_week = -4
         self.draft_week = -3
         self.draft_end_week = -2
         self.cut_week = -1
@@ -1832,10 +1860,10 @@ class Season(object):
     def fill_pro_bowl_teams(self):
         global ls
         #          get_top_rated(pos,        scope, stat_type, conf, min_att, num_to_return, years_in_nfl)
-        mvp =   self.search_for_top_awards("ANY", "SEASON", "MVP", "ANY", 600, 1, "ANY")[0]
+        mvp =   self.search_for_top_awards("ANY",     "SEASON", "MVP",  "ANY", 600, 1, "ANY")[0]
         opoys = self.search_for_top_awards("OFFENSE", "SEASON", "OPOY", "ANY", 600, 2, "ANY")
-        dpoys = self.search_for_top_awards("OFFENSE", "SEASON", "DPOY", "ANY", 600, 2, "ANY")
-        oroys = self.search_for_top_awards("DEFENSE", "SEASON", "OROY", "ANY", 400, 3, 0)
+        dpoys = self.search_for_top_awards("DEFENSE", "SEASON", "DPOY", "ANY", 600, 2, "ANY")
+        oroys = self.search_for_top_awards("OFFENSE", "SEASON", "OROY", "ANY", 400, 3, 0)
         droys = self.search_for_top_awards("DEFENSE", "SEASON", "DROY", "ANY", 400, 3, 0)
         
         opoy = opoys[0]
@@ -1871,17 +1899,17 @@ class Season(object):
             if not player in {mvp, dpoy}:
                 droy = player
                 break
-            
+        
         for team in self.teams:
             if team.abbreviation == mvp.team:
                 team.add_stats(mvp, "MVPS",   1, "AWARDS", self.this_year)
-            elif team.abbreviation == opoy.team:
+            if team.abbreviation == opoy.team:
                 team.add_stats(opoy, "OPOYS", 1, "AWARDS", self.this_year)
-            elif team.abbreviation == dpoy.team:
+            if team.abbreviation == dpoy.team:
                 team.add_stats(dpoy, "DPOYS", 1, "AWARDS", self.this_year)
-            elif team.abbreviation == oroy.team:
+            if team.abbreviation == oroy.team:
                 team.add_stats(oroy, "OROYS", 1, "AWARDS", self.this_year)
-            elif team.abbreviation == droy.team:
+            if team.abbreviation == droy.team:
                 team.add_stats(droy, "DROYS", 1, "AWARDS", self.this_year)
         
         #                pos    scope     conf  att num  exp
@@ -1892,7 +1920,7 @@ class Season(object):
         afc_lineup.extend(ls.get_top_rated("QB", "SEASON", "ALL",     "AFC", 200, 3, "ANY"))
         afc_lineup.extend(ls.get_top_rated("RB", "SEASON", "ALL",     "AFC", 90, 4, "ANY"))
         afc_lineup.extend(ls.get_top_rated("WR", "SEASON", "RECEIVE", "AFC", 60, 5, "ANY"))
-        afc_lineup.extend(ls.get_top_rated("TE", "SEASON", "ALL",     "AFC", 40, 4, "ANY"))
+        afc_lineup.extend(ls.get_top_rated("TE", "SEASON", "RECEIVE",     "AFC", 40, 4, "ANY"))
         #afc_lineup.extend(ls.get_top_rated("TE", "SEASON", "BLOCK",   "AFC", 400, 1, "ANY"))
         afc_lineup.extend(ls.get_top_rated("OL", "SEASON", "BLOCK",   "AFC", 700, 7, "ANY"))
         afc_lineup.extend(ls.get_top_rated("DL", "SEASON", "BLITZER", "AFC", 700, 8, "ANY"))
@@ -1914,7 +1942,7 @@ class Season(object):
         nfc_lineup.extend(ls.get_top_rated("QB", "SEASON", "ALL",     "NFC", 200, 3, "ANY"))
         nfc_lineup.extend(ls.get_top_rated("RB", "SEASON", "ALL",     "NFC", 90, 4, "ANY"))
         nfc_lineup.extend(ls.get_top_rated("WR", "SEASON", "RECEIVE", "NFC", 60, 5, "ANY"))
-        nfc_lineup.extend(ls.get_top_rated("TE", "SEASON", "ALL",     "NFC", 40, 4, "ANY"))
+        nfc_lineup.extend(ls.get_top_rated("TE", "SEASON", "RECEIVE",     "NFC", 40, 4, "ANY"))
         #nfc_lineup.extend(ls.get_top_rated("TE", "SEASON", "BLOCK",   "NFC", 400, 1, "ANY"))
         nfc_lineup.extend(ls.get_top_rated("OL", "SEASON", "BLOCK",   "NFC", 700, 7, "ANY"))
         nfc_lineup.extend(ls.get_top_rated("DL", "SEASON", "BLITZER", "NFC", 700, 8, "ANY"))
@@ -1964,7 +1992,8 @@ class Season(object):
         best_val = 15000
         if self.mega_draft and self.current_week < -1:
             best_val = 50000
-        return best_val*offset
+        year_diff = 0.95**(pick[2] - self.this_year)
+        return best_val*offset*year_diff
         
     def make_schedule(self):
         sched = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -2096,7 +2125,7 @@ class Season(object):
             if not team.user_type == "AUTO":
                 all_autos = False
         tries = 0
-        while autos_not_full and not (self.current_week == self.draft_week or self.current_week > self.season_over_week) and tries < 100 and not (self.current_week == self.draft_end_week and not draft1.is_done):
+        while autos_not_full and not (self.current_week <= self.draft_week or self.current_week > self.season_over_week) and tries < 100 and not (self.current_week == self.draft_end_week and not draft1.is_done):
             autos_not_full = False
             self.ready_to_sim = True
             for team in self.teams:
@@ -2111,6 +2140,14 @@ class Season(object):
             tries += 1
         if tries >= 100:
             self.done = True
+        if self.current_week == self.resign_week:
+            for team in self.teams:
+                team.sign_53()
+                team.cut_to_53()
+                team.week_over()
+            self.current_week += 1
+            self.free_agents.sort_free_agents()
+            return
         self.free_agents.sort_free_agents()
         if self.ready_to_sim or (self.current_week == self.draft_week or self.current_week > self.season_over_week) and not (self.current_week == self.draft_end_week and not draft1.is_done):
             for team in self.teams:
@@ -2149,7 +2186,8 @@ class Season(object):
                 change_screen("AUTO DRAFTING")
                 auto_draft_end = "DONE"
             else:
-                change_screen("DRAFT")
+                #change_screen("DRAFT")
+                pass
         elif self.current_week >= self.season_over_week and self.ready_to_sim:
             self.current_week += 1
             self.free_agents.advance_season()
@@ -2165,7 +2203,7 @@ class Season(object):
             for team in self.teams:
                 if team in self.afc_playoffs or team in self.nfc_playoffs:
                     draft_order_teams.append(team)
-            set_draft_picks(draft_order_teams, 7, False)
+            set_draft_picks(draft_order_teams, 7, False, self.this_year+1)
             if self.schedule[self.sb_week][0][2] > self.schedule[self.sb_week][0][3]:
                 ls.add_sb(self.schedule[self.sb_week][0][0].team_name, self.schedule[self.sb_week][0][1].team_name, self.schedule[self.sb_week][0][2], self.schedule[self.sb_week][0][3])
             else:
@@ -4108,8 +4146,23 @@ class Play(object):
             return max(random_skew(mean, self.target.stdev_YAC), -1)
         
     def get_pass_distance(self):
-        mean = (self.target.target_dist + self.offense.qb1.air_yds_throw)/2
-        stdev = (self.target.stdev_target_dist + self.offense.qb1.stdev_air_yds_throw)/2
+        if self.man_zone == "MAN":
+            if self.get_defender() == "NONE":
+                mean = (self.target.target_dist + self.offense.qb1.air_yds_throw)/2
+                stdev = (self.target.stdev_target_dist + self.offense.qb1.stdev_air_yds_throw)/2
+            else:
+                mean = (self.get_defender().air_yds_allowed + self.target.target_dist + self.offense.qb1.air_yds_throw)/3
+                stdev = (self.get_defender().stdev_air_yds_allowed + self.target.stdev_target_dist + self.offense.qb1.stdev_air_yds_throw)/3
+        else:
+            def_mean = 0
+            def_std = 0
+            for defender in self.coverage:
+                def_mean += defender.air_yds_allowed
+                def_std += defender.stdev_air_yds_allowed
+            def_mean /= len(self.coverage)
+            def_std /= len(self.coverage)
+            mean = (def_mean + self.target.target_dist + self.offense.qb1.air_yds_throw)/3
+            stdev = (def_std + self.target.stdev_target_dist + self.offense.qb1.stdev_air_yds_throw)/3
         return max(random_skew(mean, stdev), -1)
         
     def get_run_result(self):
@@ -4331,7 +4384,13 @@ class Play(object):
         return "TOUCHBACK"
         
     def get_punt_return(self):
-        return max(random_skew(self.defense.rt.kick_return_dist/2, self.defense.rt.stdev_kick_return_dist), -1)
+        rand = random(0,1)
+        if rand < 0.2:
+            return 0
+        elif rand < 0.7:
+            return random(0,10)
+        else:
+            return max(random_skew(self.defense.rt.kick_return_dist/2, self.defense.rt.stdev_kick_return_dist), -1)
         
     def get_field_goal_result(self):
         if self.offense.k.fg_range < self.field_goal_dist:
@@ -4534,6 +4593,7 @@ class Stats(object):
     
     def __init__(self):
         self.stats = {}
+        self.pos_ratings = {}        
         
     def get_mvp_points(self, scope, this_year, position, record_matters = True):
         global c
@@ -4570,6 +4630,56 @@ class Stats(object):
         global c
         min_rat = 15
         max_rat = 115
+        if stat in {"QB","WR","RB","TE","OL","DL","LB","DB","K","RT"}:
+            if not (stat in self.pos_ratings.keys()):
+                self.pos_ratings[stat] = {this_year : [False, 0, 0]}
+            if not (this_year in self.pos_ratings[stat].keys()):
+                self.pos_ratings[stat][this_year] = [False,0,0]
+            if self.pos_ratings[stat][this_year][0]:
+                return self.pos_ratings[stat][this_year][1], self.pos_ratings[stat][this_year][2]
+            stats = []
+            if stat == "QB":
+                stats.append("PASS")
+                stats.append("RUN")
+            elif stat == "RB":
+                stats.append("RUN")
+                stats.append("CATCH")
+            elif stat == "WR":
+                stats.append("CATCH")
+            elif stat == "TE":
+                stats.append("BLOCK")
+                stats.append("CATCH")
+            elif stat == "OL":
+                stats.append("BLOCK")
+            elif stat == "DL":
+                stats.append("BLITZER")
+            elif stat == "LB":
+                stats.append("BLITZER")
+                stats.append("COVER")
+            elif stat == "DB":
+                stats.append("COVER")
+            elif stat == "K":
+                stats.append("XP")
+                stats.append("FG")
+            elif stat == "RT":
+                stats.append("RETURN")
+            rat = 0
+            att = 0
+            for astat in stats:
+                weight = 1.0
+                if astat == "BLOCK":
+                    weight = 0.1
+                umb_att = self.get_umbrella_attempts(astat)
+                add_att = self.get_stat(scope, umb_att, this_year) * weight
+                rat += add_att * self.get_stat_rating("CAREER", astat,0)
+                att += add_att
+            if len(stats) == 0:
+                print(pos)
+            final_rating = divide_maybe_zero(rat,att)
+            self.pos_ratings[stat][this_year][1] = final_rating
+            self.pos_ratings[stat][this_year][2] = att
+            self.pos_ratings[stat][this_year][0] = True
+            return final_rating, att
         if stat == "ALL":
             rat = 0
             att = 0
@@ -4606,7 +4716,7 @@ class Stats(object):
             rat = float(interception + comp + yards + td + 0.2*fumble + 0.2*sack)/4.4
             return rat
         elif stat in {"RUSH", "RUN"}:
-            fumble = 100
+            fumble = 0
             run = 0
             td = 0
             if self.get_stat(scope, "CARRIES", this_year) > 0:
@@ -4626,6 +4736,8 @@ class Stats(object):
                 drop = reverse_stat_to_ovr(100*float(self.get_stat(scope, "DROPS PER TARGETS", this_year)), c.drop_avg, c.drop_jump, min_rat, max_rat)
                 complete =     stat_to_ovr(100*float(self.get_stat(scope, "CATCHES PER TARGETS", this_year)), c.complete_avg, c.complete_jump, min_rat, max_rat)
                 td =           stat_to_ovr(100*float(self.get_stat(scope, "RECEIVING TDS PER TARGETS", this_year)), c.td_avg, c.td_jump, min_rat, max_rat)
+            else:
+                return 0
             distance = 0
             yac = 0
             if self.get_stat(scope, "CATCHES", this_year) > 0:
@@ -4912,6 +5024,12 @@ class Stats(object):
                 if self.stats.get("GAME SNAPS PLAYED", 0) > 0:
                     self.stats[scope + " GAMES PLAYED"] = self.stats.get(scope + " GAMES PLAYED", 0) + stat_amount
                     self.stats[scope + " PLAYED " + stat_name] = self.stats.get(scope + " PLAYED " + stat_name, 0) + stat_amount
+            else:
+                for pos in self.pos_ratings.keys():
+                    if this_year in self.pos_ratings[pos].keys():
+                        self.pos_ratings[pos][this_year][0] = False
+                    else:
+                        self.pos_ratings[pos][this_year] = [False,0,0]
             if stat_name in {"PASS YARDS", "RECEIVING YARDS", "RUSH YARDS", "PUNT YARDS", "FG DISTANCE", "PUNT RETURN YARDS", "KICK RETURN YARDS"}:
                 for s in [scope, "CAREER HIGH", "SEASON HIGH"]:
                     try:
@@ -5147,13 +5265,15 @@ class Player(object):
         self.upgrade_type =               rand_ability_type()
         self.team =                       "ROOKIE"
         self.projected_ovr =              proj_ovr
+        self.adjust_ovr =                 0
         self.contract_amount =            0
         self.contract_length =            0
         self.depth =                      0
         self.is_first_year_of_contract =  False
         self.confidence =                 0.5
         self.loyalty =                    min_max_skew(10,50)
-        #self.stamina =                    random_skew(ovr, 2)
+        self.stamina =                    random_skew(75, 4)
+        self.fatigue =                    0
         self.injured =                    False 
         self.injury_length =              0
         self.injury_amount =              0
@@ -5228,14 +5348,14 @@ class Player(object):
         self.in_trade_block = False
         self.buttons = [ Button(200, 200, 100, 100, "START", "START", "DEPTH"),
                          Button(200, 300, 100, 100, "BENCH", "BENCH", "DEPTH"),
-                         Button(200, 400, 100, 100, "GOOD", "GOOD", "OPINION"),
-                         Button(200, 500, 100, 100, "BAD",  "BAD",  "OPINION"),
+                         Button(200, 400, 100, 100, "GOOD",  "GOOD",  "OPINION"),
+                         Button(200, 500, 100, 100, "BAD",   "BAD",   "OPINION"),
                         
-                         Button(350, 200, 100, 100, "Cut", "CUT", "CONTRACT"),
-                         Button(350, 300, 100, 100, "Sign", "SIGN", "CONTRACT"),
+                         Button(350, 200, 100, 100, "Trade Block",     "TRADE",     "TRADE"),
+                         Button(350, 300, 100, 100, "Sign",      "SIGN",      "CONTRACT"),
                          Button(350, 400, 100, 100, "Negotiate", "NEGOTIATE", "CONTRACT"),
-                         Button(350, 500, 100, 100, "Upgrade", "UPGRADE", "UPGRADE"),
-                         Button(350, 600, 100, 100, "TRADE", "TRADE", "TRADE") ]
+                        #Button(350, 500, 100, 100, "Upgrade",   "UPGRADE",   "UPGRADE"),
+                         Button(350, 500,  50,  50, "Cut",       "CUT",       "CONTRACT")]
         
         self.get_button("SIGN").highlight = True
             
@@ -5321,6 +5441,13 @@ class Player(object):
         self.age = age
         self.start_age = age
         
+    def adjust_to_team(self):
+        if self.adjust_ovr > 0:
+            max_boost = min(3,self.adjust_ovr*0.5)
+            rand_boost = random(0, max_boost)
+            self.change_overall(rand_boost)
+            self.adjust_ovr = self.adjust_ovr - rand_boost
+        
     def get_mvp_points(self, scope, this_year, record_matters):
         return self.career_stats.get_mvp_points(scope, this_year, self.position, record_matters)
             
@@ -5339,10 +5466,10 @@ class Player(object):
         return self.get_value_proj(False)
         
     def get_value_proj(self, is_projected):
-        global c
+        global c, use_overall
         #overall, age, age type, contract length, contract amount, position
         ovr = 1
-        overall = self.overall()
+        overall = self.overall(use_overall)
         if is_projected:
             overall = self.projected_ovr
         if overall > 60:
@@ -5365,7 +5492,7 @@ class Player(object):
         return ovr*age*contract*position
         
     def end_week(self):
-        global c, season1
+        global c, season1, use_overall
         type = "REGULAR"
         if season1.current_week <= 0:
             type = "PRE SEASON"
@@ -5375,10 +5502,14 @@ class Player(object):
             type = "SB"
         elif season1.current_week >= season1.wildcard_week:
             type = "PLAYOFF"
-        self.career_stats.add_stat("OVERALL", self.overall(), type, season1.this_year)
+        new_fat = max(0,self.fatigue-5)
+        self.change_overall(self.fatigue-new_fat)
+        self.fatigue = new_fat
+        self.career_stats.add_stat("OVERALL", self.overall(use_overall), type, season1.this_year)
         self.career_stats.add_stat("TEAM", self.team, type, season1.this_year)
-        if self.age_range == "YOUNG" and not self.team == "FREE AGENT":
-            self.xp += 98 * c.xp_mult(self.position)
+        if self.age_range() == "YOUNG" and not self.team == "FREE AGENT":
+            self.xp += 30 * c.position_xp_multiplier(self.position)
+            self.adjust_to_team()
         if self.injured:
             self.injury_length -= 1
             if self.injury_length <= 0:
@@ -5397,20 +5528,24 @@ class Player(object):
         self.change_overall(self.injury_amount * -1)
         
     def upgrade_available(self):
-        if self.overall() + self.injury_amount >= 99:
+        global use_overall
+        if self.overall(use_overall) + self.injury_amount >= 99:
             return False
         return self.xp >= self.xp_for_upgrade()
         
     def xp_for_upgrade(self):
-        ovr = self.overall() + self.injury_amount
-        if ovr > 55:
+        global use_overall
+        ovr = self.overall(use_overall) + self.injury_amount
+        if ovr > 85:
+            return 500 + (ovr - 55)**2.2
+        elif ovr > 55:
             return 500 + 0.75 * (ovr - 55)**2
         else:
             return 500
         
     def change_overall(self, amount):
-        if amount + self.overall() > 99:
-            amount = 99 - self.overall()
+        if amount + self.overall(True) > 99:
+            amount = 99 - self.overall(True)
         self.upgrade_player("injury", amount, "NORMAL", False)
         self.upgrade_player("block chance", amount, "NORMAL", False)
         self.upgrade_player("sack allowed chance", amount, "NORMAL", False)
@@ -5441,7 +5576,7 @@ class Player(object):
         self.upgrade_player("onside kick", amount, "NORMAL", False)
     
     def end_season(self):
-        global season1
+        global season1, use_overall
         if not self.team in {"ROOKIE", "FREE AGENT"}:
             self.add_loyalty(random(0, 4))
         self.in_trade_block = False
@@ -5450,6 +5585,8 @@ class Player(object):
         self.years_played += skips + 1
         self.skip_years += skips
         self.is_first_year_of_contract = False
+        self.change_overall(self.fatigue)
+        self.fatigue = 0
         if self.contract_length > 0:
             self.contract_length -= 1
         else:
@@ -5458,9 +5595,12 @@ class Player(object):
         if self.injury_length <= 0:
             self.injury_length = 0
             self.injured = False
+            self.change_overall(self.injury_amount)
+            self.injury_amount = 0
+            self.depth = 0
         self.age_overall()
         if random(0,1) < self.boom_chance():
-            max_inc = 99 - self.injury_amount - self.get_overall(self.position)
+            max_inc = 99 - self.injury_amount - self.get_overall(self.position, use_overall)
             self.change_overall(random(min(4, max_inc), min(max_inc, 10)))
         if random(0,1) < self.retire_chance():
             self.retire()
@@ -5468,22 +5608,25 @@ class Player(object):
     def boom_chance(self):
         age_range = self.age_range()
         if self.team == "FREE AGENT":
-            return 0.002
+            return 0.0001
         elif age_range == "YOUNG":
-            return 0.016
+            return 0.0010
         elif age_range == "MED":
-            return 0.008
+            return 0.0005
         elif age_range == "OLD":
-            return 0.002
+            return 0.0001
         else:
             return 0
     
     def retire_chance(self):
+        global use_overall
         age_range = self.age_range()
         if age_range == "RETIRING":
             return 1.0
+        if self.years_played == 0:
+            return 0
         chance = 0.0
-        ovr = self.overall()
+        ovr = self.overall(use_overall)
         if age_range == "YOUNG":
             if ovr < 60:
                 chance += 0.4
@@ -5558,6 +5701,7 @@ class Player(object):
             println("error: age not in range: " + str(self.age))
             
     def age_overall(self):
+        global use_overall
         age_range = self.age_range()
         if age_range == "YOUNG":
             amount = random(0.1, 1.75)
@@ -5573,12 +5717,13 @@ class Player(object):
             self.upgrade_player("complete chance", amount, "NORMAL", False)
             self.upgrade_player("air yds throw", amount, "NORMAL", False)
             self.upgrade_player("fumble chance", amount, "NORMAL", False)
+            self.upgrade_player("run dist", amount - 1.0, "NORMAL", False)
         elif self.position == "RB":
             self.upgrade_player("fumble chance", amount - 0.5, "NORMAL", False)
             self.upgrade_player("block chance", amount * 0.5, "NORMAL", False)
             self.upgrade_player("sack allowed chance", amount * 0.5, "NORMAL", False)
             self.upgrade_player("drop chance", amount * 0.9, "NORMAL", False)
-            self.upgrade_player("target dist", amount, "NORMAL", False)
+            self.upgrade_player("target dist", amount - 0.5, "NORMAL", False)
             self.upgrade_player("yac", amount * 0.95, "NORMAL", False)
             self.upgrade_player("run dist", amount, "NORMAL", False)
         elif self.position == "WR":
@@ -5586,6 +5731,8 @@ class Player(object):
             self.upgrade_player("target dist", amount, "NORMAL", False)
             self.upgrade_player("yac", amount, "NORMAL", False)
             self.upgrade_player("fumble chance", amount - 0.5, "NORMAL", False)
+            self.upgrade_player("kick return dist", amount, "NORMAL", False)
+            self.upgrade_player("tb chance", amount, "NORMAL", False)
         elif self.position == "TE":
             self.upgrade_player("fumble chance", amount - 0.5, "NORMAL", False)
             self.upgrade_player("block chance", amount * 0.9, "NORMAL", False)
@@ -5630,6 +5777,10 @@ class Player(object):
         elif self.position == "RT":
             self.upgrade_player("kick return dist", amount, "NORMAL", False)
             self.upgrade_player("tb chance", amount, "NORMAL", False)
+        if self.overall(True) >= 98.5:
+            self.change_overall(98 - self.overall(True))
+        if self.overall(use_overall) >= 98.5:
+            self.change_overall(98 - self.overall(use_overall))
     
     def has_stats(self, type, scope, this_year = 0):
         return self.has_stats_min_att(type, scope, this_year, 1)
@@ -5729,7 +5880,7 @@ class Player(object):
         return "NONE"
         
     def draw_full_player(self, x, y, pos = "NONE"):
-        global c, ls
+        global c, ls, use_overall
         if pos == "NONE":
             pos = self.position
         fill(150)
@@ -5738,7 +5889,7 @@ class Player(object):
         text("Team", 1300, 50, 66, 50)
         textSize(50)
         text(self.first_name + " " + self.last_name + " " + self.position, x + 5, y - 50)
-        text(str(int(round(self.get_overall(pos)))) + " OVR", x + 5, y)
+        text(str(int(round(self.get_overall(pos, use_overall)))) + " OVR", x + 5, y)
         textSize(25)
         text("(proj: " + str(int(round(self.projected_ovr))) + " ovr)", x + 205, y)
         text("Team: " + self.team + " Drafted by: " + self.drafted_by + "(" + str(self.draft_position[0]) + ", " + str(self.draft_position[1]) + ", " + str(self.draft_position[2]) + ")", x + 5, y + 30)
@@ -5751,101 +5902,201 @@ class Player(object):
         text("XP: " + str(int(round(self.xp))) + " Skips: " + str(self.skip_years), x + 5, y + 120)
         text("XP to next level: " + str(int(round(self.xp_for_upgrade()))), x + 5, y + 150)
         if self.injured:
-            text("Injured for " + str(self.injury_length) + " weeks (-" + str(int(self.injury_amount)) + " ovr)", x + 5, y + 180)
+            text("Injured for " + str(self.injury_length) + " weeks (-" + str(int(self.injury_amount)) + " ovr), fatigue: " + str(round(self.fatigue,2)), x + 5, y + 180)
         else:
-            text("Healthy", x + 5, y + 180)
+            text("Healthy, fatigue: " + str(round(self.fatigue,2)), x + 5, y + 180)
         text("Value: " + str(int(self.get_value())), x + 5, y + 205)
         textSize(15)
-        table_data = [["INJ", str(round(self.injury_chance, 4)) + "%", str(int(round(reverse_stat_to_ovr(self.injury_chance, c.injury_chance_avg, c.injury_jump)))) + " OVR"]]
+        table_data = [["INJ", str(round(self.injury_chance, 4)) + "%", str(int(round(reverse_stat_to_ovr(self.injury_chance, c.injury_chance_avg, c.injury_jump)))) + " OVR"],
+                      ["STA", "NA", str(int(round(self.stamina, 0))) + " OVR"]]
         if pos == "QB":
-            table_data.extend([  ["INT",       str(round(self.int_chance, 2)) + "%",             str(int(round(reverse_stat_to_ovr(self.int_chance, c.int_avg, c.int_jump)))) + " OVR"],
-                                 ["COMP",      str(round(self.complete_chance, 2)) + "%",        str(int(round(stat_to_ovr(self.complete_chance, c.complete_avg, c.complete_jump)))) + " OVR"],
-                                 ["AIR YDS",   str(round(self.air_yds_throw, 2)) + " yards",     str(int(round(stat_to_ovr(self.air_yds_throw, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
-                                 ["STDEV",     str(self.stdev_air_yds_throw) + "don't round",    "NA"],
-                                 ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
-                                 ["RUN",       str(round(self.run_dist, 2)) + " yards",          str(int(round(stat_to_ovr(self.run_dist, c.run_avg, c.run_jump)))) + " OVR"], 
-                                 ["STDEV",     str(round(self.stdev_run_dist, 2)) + "don't round", "NA"] ])
+            if use_overall:
+                table_data.extend([  ["INT",       str(round(self.int_chance, 2)) + "%",             str(int(round(reverse_stat_to_ovr(self.int_chance, c.int_avg, c.int_jump)))) + " OVR"],
+                                     ["COMP",      str(round(self.complete_chance, 2)) + "%",        str(int(round(stat_to_ovr(self.complete_chance, c.complete_avg, c.complete_jump)))) + " OVR"],
+                                     ["AIR YDS",   str(round(self.air_yds_throw, 2)) + " yards",     str(int(round(stat_to_ovr(self.air_yds_throw, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
+                                     ["STDEV",     str(self.stdev_air_yds_throw) + "don't round",    "NA"],
+                                     ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
+                                     ["RUN",       str(round(self.run_dist, 2)) + " yards",          str(int(round(stat_to_ovr(self.run_dist, c.run_avg, c.run_jump)))) + " OVR"], 
+                                     ["STDEV",     str(round(self.stdev_run_dist, 2)) + "don't round", "NA"] ])
+            else:
+                table_data.extend([  ["INT","?","?"],
+                                     ["COMP","?","?"],
+                                     ["AIR YDS","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["FUM","?","?"],
+                                     ["RUN","?","?"],
+                                     ["STDEV","?","?"]   ])                            
         elif pos == "RB":
-            table_data.extend([  ["BLK",       str(round(self.block_chance, 2)) + "%",           str(int(round(stat_to_ovr(self.block_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
-                                 ["SACK",      str(round(self.sack_allowed_chance, 2)) + "%",    str(int(round(reverse_stat_to_ovr(self.sack_allowed_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
-                                 ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
-                                 ["DROP",      str(round(self.drop_chance, 2)) + "%",            str(int(round(reverse_stat_to_ovr(self.drop_chance, c.drop_avg, c.drop_jump)))) + " OVR"],
-                                 ["ADOT",      str(round(self.target_dist, 2)) + " yards",       str(int(round(stat_to_ovr(self.target_dist, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_target_dist, 2)) + "don't round", "NA"],
-                                 ["YAC",       str(round(self.YAC, 2)) + " yards",               str(int(round(stat_to_ovr(self.YAC, c.YAC_avg, c.YAC_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_YAC, 2)) + "don't round",         "NA"],
-                                 ["RUN",       str(round(self.run_dist, 2)) + " yards",          str(int(round(stat_to_ovr(self.run_dist, c.run_avg, c.run_jump)))) + " OVR"], 
-                                 ["STDEV",     str(round(self.stdev_run_dist, 2)) + "don't round", "NA"] ])    
+            if use_overall:
+                table_data.extend([  ["BLK",       str(round(self.block_chance, 2)) + "%",           str(int(round(stat_to_ovr(self.block_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
+                                    ["SACK",      str(round(self.sack_allowed_chance, 2)) + "%",    str(int(round(reverse_stat_to_ovr(self.sack_allowed_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
+                                    ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
+                                    ["DROP",      str(round(self.drop_chance, 2)) + "%",            str(int(round(reverse_stat_to_ovr(self.drop_chance, c.drop_avg, c.drop_jump)))) + " OVR"],
+                                    ["ADOT",      str(round(self.target_dist, 2)) + " yards",       str(int(round(stat_to_ovr(self.target_dist, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_target_dist, 2)) + "don't round", "NA"],
+                                    ["YAC",       str(round(self.YAC, 2)) + " yards",               str(int(round(stat_to_ovr(self.YAC, c.YAC_avg, c.YAC_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_YAC, 2)) + "don't round",         "NA"],
+                                    ["RUN",       str(round(self.run_dist, 2)) + " yards",          str(int(round(stat_to_ovr(self.run_dist, c.run_avg, c.run_jump)))) + " OVR"], 
+                                    ["STDEV",     str(round(self.stdev_run_dist, 2)) + "don't round", "NA"] ])    
+            else:
+                table_data.extend([  ["BLK","?","?"],
+                                     ["SACK","?","?"],
+                                     ["FUM","?","?"],
+                                     ["DROP","?","?"],
+                                     ["ADOT","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["YAC","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["RUN","?","?"],
+                                     ["STDEV","?","?"]   ])  
         elif pos == "WR":
-            table_data.extend([  ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
-                                 ["DROP",      str(round(self.drop_chance, 2)) + "%",            str(int(round(reverse_stat_to_ovr(self.drop_chance, c.drop_avg, c.drop_jump)))) + " OVR"],
-                                 ["ADOT",      str(round(self.target_dist, 2)) + " yards",       str(int(round(stat_to_ovr(self.target_dist, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_target_dist, 2)) + "don't round", "NA"],
-                                 ["YAC",       str(round(self.YAC, 2)) + " yards",               str(int(round(stat_to_ovr(self.YAC, c.YAC_avg, c.YAC_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_YAC, 2)) + "don't round",         "NA"] ])
+            if use_overall:
+                table_data.extend([  ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
+                                    ["DROP",      str(round(self.drop_chance, 2)) + "%",            str(int(round(reverse_stat_to_ovr(self.drop_chance, c.drop_avg, c.drop_jump)))) + " OVR"],
+                                    ["ADOT",      str(round(self.target_dist, 2)) + " yards",       str(int(round(stat_to_ovr(self.target_dist, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_target_dist, 2)) + "don't round", "NA"],
+                                    ["YAC",       str(round(self.YAC, 2)) + " yards",               str(int(round(stat_to_ovr(self.YAC, c.YAC_avg, c.YAC_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_YAC, 2)) + "don't round",         "NA"] ])
+            else:
+                table_data.extend([  ["FUM","?","?"],
+                                     ["DROP","?","?"],
+                                     ["ADOT","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["YAC","?","?"],
+                                     ["STDEV","?","?"]  ]) 
         elif pos == "TE":
-            table_data.extend([  ["BLK",       str(round(self.block_chance, 2)) + "%",           str(int(round(stat_to_ovr(self.block_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
-                                 ["SACK",      str(round(self.sack_allowed_chance, 2)) + "%",    str(int(round(reverse_stat_to_ovr(self.sack_allowed_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
-                                 ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
-                                 ["DROP",      str(round(self.drop_chance, 2)) + "%",            str(int(round(reverse_stat_to_ovr(self.drop_chance, c.drop_avg, c.drop_jump)))) + " OVR"],
-                                 ["ADOT",      str(round(self.target_dist, 2)) + " yards",       str(int(round(stat_to_ovr(self.target_dist, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_target_dist, 2)) + "don't round", "NA"],
-                                 ["YAC",       str(round(self.YAC, 2)) + " yards",               str(int(round(stat_to_ovr(self.YAC, c.YAC_avg, c.YAC_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_YAC, 2)) + "don't round",         "NA"] ])
+            if use_overall:
+                table_data.extend([  ["BLK",       str(round(self.block_chance, 2)) + "%",           str(int(round(stat_to_ovr(self.block_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
+                                    ["SACK",      str(round(self.sack_allowed_chance, 2)) + "%",    str(int(round(reverse_stat_to_ovr(self.sack_allowed_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
+                                    ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
+                                    ["DROP",      str(round(self.drop_chance, 2)) + "%",            str(int(round(reverse_stat_to_ovr(self.drop_chance, c.drop_avg, c.drop_jump)))) + " OVR"],
+                                    ["ADOT",      str(round(self.target_dist, 2)) + " yards",       str(int(round(stat_to_ovr(self.target_dist, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_target_dist, 2)) + "don't round", "NA"],
+                                    ["YAC",       str(round(self.YAC, 2)) + " yards",               str(int(round(stat_to_ovr(self.YAC, c.YAC_avg, c.YAC_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_YAC, 2)) + "don't round",         "NA"] ])
+            else:
+                table_data.extend([  ["BLK","?","?"],
+                                     ["SACK","?","?"],
+                                     ["FUM","?","?"],
+                                     ["DROP","?","?"],
+                                     ["ADOT","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["YAC","?","?"],
+                                     ["STDEV","?","?"]  ]) 
         elif pos == "OL":
-            table_data.extend([  ["BLK",       str(round(self.block_chance, 2)) + "%",           str(int(round(stat_to_ovr(self.block_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
-                                 ["SACK",      str(round(self.sack_allowed_chance, 2)) + "%",    str(int(round(reverse_stat_to_ovr(self.sack_allowed_chance, c.sack_avg, c.sack_jump)))) + " OVR"] ])
+            if use_overall:
+                table_data.extend([  ["BLK",       str(round(self.block_chance, 2)) + "%",           str(int(round(stat_to_ovr(self.block_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
+                                     ["SACK",      str(round(self.sack_allowed_chance, 2)) + "%",    str(int(round(reverse_stat_to_ovr(self.sack_allowed_chance, c.sack_avg, c.sack_jump)))) + " OVR"] ])
+            else:
+                table_data.extend([  ["BLK","?","?"],
+                                     ["SACK","?","?"]  ]) 
         elif pos == "DL":
-            table_data.extend([  ["RET",       str(round(self.def_return_dist, 2)) + " yards",   "NA"],
-                                 ["STDEV",     str(round(self.stdev_def_return_dist, 2)) + "don't round", "NA"],
-                                 ["SACK",      str(round(self.sack_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.sack_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
-                                 ["BLK",       str(round(self.blocked_chance, 2)) + "%",         str(int(round(reverse_stat_to_ovr(self.blocked_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
-                                 ["RUN",       str(round(self.run_dist_allowed, 2)) + " yards",  str(int(round(reverse_stat_to_ovr(self.run_dist_allowed, c.run_avg, c.run_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_run_dist_allowed, 2)) + "don't round", "NA"],
-                                 ["FF",        str(round(self.ff_chance, 2)) + "%",              str(int(round(stat_to_ovr(self.ff_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"] ])
+            if use_overall:
+                table_data.extend([  ["RET",       str(round(self.def_return_dist, 2)) + " yards",   "NA"],
+                                    ["STDEV",     str(round(self.stdev_def_return_dist, 2)) + "don't round", "NA"],
+                                    ["SACK",      str(round(self.sack_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.sack_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
+                                    ["BLK",       str(round(self.blocked_chance, 2)) + "%",         str(int(round(reverse_stat_to_ovr(self.blocked_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
+                                    ["RUN",       str(round(self.run_dist_allowed, 2)) + " yards",  str(int(round(reverse_stat_to_ovr(self.run_dist_allowed, c.run_avg, c.run_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_run_dist_allowed, 2)) + "don't round", "NA"],
+                                    ["FF",        str(round(self.ff_chance, 2)) + "%",              str(int(round(stat_to_ovr(self.ff_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"] ])
+            else:
+                table_data.extend([  ["RET","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["SACK","?","?"],
+                                     ["BLK","?","?"],
+                                     ["RUN","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["FF","?","?"]     ]) 
         elif pos == "LB":
-            table_data.extend([  ["RET",       str(round(self.def_return_dist, 2)) + " yards",   "NA"],
-                                 ["STDEV",     str(round(self.stdev_def_return_dist, 2)) + "don't round", "NA"],
-                                 ["SACK",      str(round(self.sack_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.sack_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
-                                 ["BLK",       str(round(self.blocked_chance, 2)) + "%",         str(int(round(reverse_stat_to_ovr(self.blocked_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
-                                 ["RUN",       str(round(self.run_dist_allowed, 2)) + " yards",  str(int(round(reverse_stat_to_ovr(self.run_dist_allowed, c.run_avg, c.run_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_run_dist_allowed, 2)) + "don't round", "NA"],
-                                 ["FF",        str(round(self.ff_chance, 2)) + "%",              str(int(round(stat_to_ovr(self.ff_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
-                                 ["PASS",      str(round(self.air_yds_allowed, 2)) + " yards",   str(int(round(reverse_stat_to_ovr(self.air_yds_allowed, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_air_yds_allowed, 2)) + "don't round", "NA"],
-                                 ["INT",       str(round(self.int_catch_chance, 2)) + "%",       str(int(round(stat_to_ovr(self.int_catch_chance, c.int_avg, c.int_jump)))) + " OVR"],
-                                 ["COMP",      str(round(self.complete_chance_allowed, 2)) + "%", str(int(round(reverse_stat_to_ovr(self.complete_chance_allowed, c.complete_avg, c.complete_jump)))) + " OVR"],
-                                 ["YAC",       str(round(self.YAC_allowed, 2)) + " yards",       str(int(round(reverse_stat_to_ovr(self.YAC_allowed, c.YAC_avg, c.YAC_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_YAC_allowed, 2)) + "don't round",     "NA"] ])
+            if use_overall:
+                table_data.extend([  ["RET",       str(round(self.def_return_dist, 2)) + " yards",   "NA"],
+                                    ["STDEV",     str(round(self.stdev_def_return_dist, 2)) + "don't round", "NA"],
+                                    ["SACK",      str(round(self.sack_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.sack_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
+                                    ["BLK",       str(round(self.blocked_chance, 2)) + "%",         str(int(round(reverse_stat_to_ovr(self.blocked_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
+                                    ["RUN",       str(round(self.run_dist_allowed, 2)) + " yards",  str(int(round(reverse_stat_to_ovr(self.run_dist_allowed, c.run_avg, c.run_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_run_dist_allowed, 2)) + "don't round", "NA"],
+                                    ["FF",        str(round(self.ff_chance, 2)) + "%",              str(int(round(stat_to_ovr(self.ff_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
+                                    ["PASS",      str(round(self.air_yds_allowed, 2)) + " yards",   str(int(round(reverse_stat_to_ovr(self.air_yds_allowed, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_air_yds_allowed, 2)) + "don't round", "NA"],
+                                    ["INT",       str(round(self.int_catch_chance, 2)) + "%",       str(int(round(stat_to_ovr(self.int_catch_chance, c.int_avg, c.int_jump)))) + " OVR"],
+                                    ["COMP",      str(round(self.complete_chance_allowed, 2)) + "%", str(int(round(reverse_stat_to_ovr(self.complete_chance_allowed, c.complete_avg, c.complete_jump)))) + " OVR"],
+                                    ["YAC",       str(round(self.YAC_allowed, 2)) + " yards",       str(int(round(reverse_stat_to_ovr(self.YAC_allowed, c.YAC_avg, c.YAC_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_YAC_allowed, 2)) + "don't round",     "NA"] ])
+            else:
+                table_data.extend([  ["RET","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["SACK","?","?"],
+                                     ["BLK","?","?"],
+                                     ["RUN","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["FF","?","?"],
+                                     ["PASS","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["INT","?","?"],
+                                     ["COMP","?","?"],
+                                     ["YAC","?","?"],
+                                     ["STDEV","?","?"]   ])
         elif pos == "DB":
-            table_data.extend([  ["RET",       str(round(self.def_return_dist, 2)) + " yards",   "NA"],
-                                 ["STDEV",     str(round(self.stdev_def_return_dist, 2)) + "don't round", "NA"],
-                                 ["SACK",      str(round(self.sack_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.sack_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
-                                 ["BLK",       str(round(self.blocked_chance, 2)) + "%",         str(int(round(reverse_stat_to_ovr(self.blocked_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
-                                 ["RUN",       str(round(self.run_dist_allowed, 2)) + " yards",  str(int(round(reverse_stat_to_ovr(self.run_dist_allowed, c.run_avg, c.run_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_run_dist_allowed, 2)) + "don't round", "NA"],
-                                 ["FF",        str(round(self.ff_chance, 2)) + "%",              str(int(round(stat_to_ovr(self.ff_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
-                                 ["PASS",      str(round(self.air_yds_allowed, 2)) + " yards",   str(int(round(reverse_stat_to_ovr(self.air_yds_allowed, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_air_yds_allowed, 2)) + "don't round", "NA"],
-                                 ["INT",       str(round(self.int_catch_chance, 2)) + "%",       str(int(round(stat_to_ovr(self.int_catch_chance, c.int_avg, c.int_jump)))) + " OVR"],
-                                 ["COMP",      str(round(self.complete_chance_allowed, 2)) + "%", str(int(round(reverse_stat_to_ovr(self.complete_chance_allowed, c.complete_avg, c.complete_jump)))) + " OVR"],
-                                 ["YAC",       str(round(self.YAC_allowed, 2)) + " yards",       str(int(round(reverse_stat_to_ovr(self.YAC_allowed, c.YAC_avg, c.YAC_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_YAC_allowed, 2)) + "don't round",     "NA"] ])
+            if use_overall:
+                table_data.extend([  ["RET",       str(round(self.def_return_dist, 2)) + " yards",   "NA"],
+                                    ["STDEV",     str(round(self.stdev_def_return_dist, 2)) + "don't round", "NA"],
+                                    ["SACK",      str(round(self.sack_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.sack_chance, c.sack_avg, c.sack_jump)))) + " OVR"],
+                                    ["BLK",       str(round(self.blocked_chance, 2)) + "%",         str(int(round(reverse_stat_to_ovr(self.blocked_chance, c.block_chance_avg, c.block_jump)))) + " OVR"],
+                                    ["RUN",       str(round(self.run_dist_allowed, 2)) + " yards",  str(int(round(reverse_stat_to_ovr(self.run_dist_allowed, c.run_avg, c.run_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_run_dist_allowed, 2)) + "don't round", "NA"],
+                                    ["FF",        str(round(self.ff_chance, 2)) + "%",              str(int(round(stat_to_ovr(self.ff_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"],
+                                    ["PASS",      str(round(self.air_yds_allowed, 2)) + " yards",   str(int(round(reverse_stat_to_ovr(self.air_yds_allowed, c.air_yds_avg, c.air_yds_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_air_yds_allowed, 2)) + "don't round", "NA"],
+                                    ["INT",       str(round(self.int_catch_chance, 2)) + "%",       str(int(round(stat_to_ovr(self.int_catch_chance, c.int_avg, c.int_jump)))) + " OVR"],
+                                    ["COMP",      str(round(self.complete_chance_allowed, 2)) + "%", str(int(round(reverse_stat_to_ovr(self.complete_chance_allowed, c.complete_avg, c.complete_jump)))) + " OVR"],
+                                    ["YAC",       str(round(self.YAC_allowed, 2)) + " yards",       str(int(round(reverse_stat_to_ovr(self.YAC_allowed, c.YAC_avg, c.YAC_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_YAC_allowed, 2)) + "don't round",     "NA"] ])
+            else:
+                table_data.extend([  ["RET","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["SACK","?","?"],
+                                     ["BLK","?","?"],
+                                     ["RUN","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["FF","?","?"],
+                                     ["PASS","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["INT","?","?"],
+                                     ["COMP","?","?"],
+                                     ["YAC","?","?"],
+                                     ["STDEV","?","?"]   ])
         elif pos == "K":
-            table_data.extend([  ["RANGE",     str(int(round(self.fg_range))) + " yards",        str(int(round(stat_to_ovr(self.fg_range, c.fg_range_avg, c.fg_range_jump)))) + " OVR"],
-                                 ["PCT",       str(round(self.fg_made_chance, 2)) + "%",         str(int(round(stat_to_ovr(self.fg_made_chance, c.fg_chance_avg, c.fg_chance_jump)))) + " OVR"],
-                                 ["PUNT",      str(round(self.punt_dist, 2)) + " yards",         str(int(round(stat_to_ovr(self.punt_dist, c.punt_avg, c.punt_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_punt_dist, 2)) + "don't round", "NA"],
-                                 ["RET",       str(round(self.kick_return_allowed, 2)) + " yards", str(int(round(reverse_stat_to_ovr(self.kick_return_allowed, c.return_avg, c.return_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_kick_return_allowed, 2)) + "don't round", "NA"],
-                                 ["TB",        str(round(self.touchback_forced_chance, 2)) + "%", str(int(round(stat_to_ovr(self.touchback_forced_chance, c.touchback_avg, c.touchback_jump)))) + " OVR"],
-                                 ["PIN",       str(round(self.pin_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.pin_chance, c.pin_avg, c.pin_jump)))) + " OVR"],
-                                 ["ONSIDE",    str(round(self.onside_kick_chance, 2)) + "%",    str(int(round(stat_to_ovr(self.onside_kick_chance, c.onside_avg, c.onside_jump)))) + " OVR"] ])
+            if use_overall:
+                table_data.extend([  ["RANGE",     str(int(round(self.fg_range))) + " yards",        str(int(round(stat_to_ovr(self.fg_range, c.fg_range_avg, c.fg_range_jump)))) + " OVR"],
+                                    ["PCT",       str(round(self.fg_made_chance, 2)) + "%",         str(int(round(stat_to_ovr(self.fg_made_chance, c.fg_chance_avg, c.fg_chance_jump)))) + " OVR"],
+                                    ["PUNT",      str(round(self.punt_dist, 2)) + " yards",         str(int(round(stat_to_ovr(self.punt_dist, c.punt_avg, c.punt_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_punt_dist, 2)) + "don't round", "NA"],
+                                    ["RET",       str(round(self.kick_return_allowed, 2)) + " yards", str(int(round(reverse_stat_to_ovr(self.kick_return_allowed, c.return_avg, c.return_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_kick_return_allowed, 2)) + "don't round", "NA"],
+                                    ["TB",        str(round(self.touchback_forced_chance, 2)) + "%", str(int(round(stat_to_ovr(self.touchback_forced_chance, c.touchback_avg, c.touchback_jump)))) + " OVR"],
+                                    ["PIN",       str(round(self.pin_chance, 2)) + "%",            str(int(round(stat_to_ovr(self.pin_chance, c.pin_avg, c.pin_jump)))) + " OVR"],
+                                    ["ONSIDE",    str(round(self.onside_kick_chance, 2)) + "%",    str(int(round(stat_to_ovr(self.onside_kick_chance, c.onside_avg, c.onside_jump)))) + " OVR"] ])
+            else:
+                table_data.extend([  ["RANGE","?","?"],
+                                     ["PCT","?","?"],
+                                     ["PUNT","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["RET","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["TB","?","?"],
+                                     ["PIN","?","?"],
+                                     ["ONSIDE","?","?"]  ])
         elif pos == "RT":
-            table_data.extend([  ["RET",       str(round(self.kick_return_dist, 2)) + " yards",  str(int(round(stat_to_ovr(self.kick_return_dist, c.return_avg, c.return_jump)))) + " OVR"],
-                                 ["STDEV",     str(round(self.stdev_kick_return_dist, 2)) + "don't round", "NA"],
-                                 ["TB",        str(round(self.touchback_chance, 2)) + "%", str(int(round(reverse_stat_to_ovr(self.touchback_chance, c.touchback_avg, c.touchback_jump)))) + " OVR"],
-                                 ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"] ])
+            if use_overall:
+                table_data.extend([  ["RET",       str(round(self.kick_return_dist, 2)) + " yards",  str(int(round(stat_to_ovr(self.kick_return_dist, c.return_avg, c.return_jump)))) + " OVR"],
+                                    ["STDEV",     str(round(self.stdev_kick_return_dist, 2)) + "don't round", "NA"],
+                                    ["TB",        str(round(self.touchback_chance, 2)) + "%", str(int(round(reverse_stat_to_ovr(self.touchback_chance, c.touchback_avg, c.touchback_jump)))) + " OVR"],
+                                    ["FUM",       str(round(self.fumble_chance, 2)) + "%",          str(int(round(reverse_stat_to_ovr(self.fumble_chance, c.fumble_avg, c.fumble_jump)))) + " OVR"] ])
+            else:
+                table_data.extend([  ["RET","?","?"],
+                                     ["STDEV","?","?"],
+                                     ["TB","?","?"],
+                                     ["FUM","?","?"]   ])
         table_data.append( ["LOYALTY", "NA", self.loyalty] )
         draw_table(["Trait", "Value", "OVR"], [80, 100, 50], 20, table_data, x + 5, y + 225)
         x += 100
@@ -5853,18 +6104,21 @@ class Player(object):
         self.draw_buttons(x, y)
         
                     
-    def draw_player(self, x, y, real_ovr, sf, pos = "NONE"):
+    def draw_player(self, x, y, real_ovr, sf, pos = "NONE", use_ovr = "NONE"):
         if pos == "NONE":
             pos = self.position
-        self.draw_player_scouting(x, y, real_ovr, sf, "NONE", pos)
+        self.draw_player_scouting(x, y, real_ovr, sf, "NONE", pos, use_ovr)
     
-    def draw_player_scouting(self, x, y, real_ovr, sf, scouting, pos = "NONE"):
+    def draw_player_scouting(self, x, y, real_ovr, sf, scouting, pos = "NONE", use_ovr = "NONE"):
+        global use_overall
+        if use_ovr == "NONE":
+            use_ovr = use_overall
         fill(150)
         if pos == "NONE":
             pos = self.position
         ovr = 0
         if real_ovr:
-            ovr = self.get_overall(pos)
+            ovr = self.get_overall(pos, use_ovr)
         else:
             ovr = self.projected_ovr
         if ovr < 60:
@@ -5877,19 +6131,21 @@ class Player(object):
             fill(200,100,100)
         elif ovr < 100:
             fill(100,100,200)
-        if not real_ovr and ovr + 10 < self.overall() and scouting in {"TOP BLUE", "FULL BLUE"}:
+        if not real_ovr and ovr + 10 < self.overall(use_ovr) and scouting in {"TOP BLUE", "FULL BLUE"}:
             fill(100,100,255)
-        elif not real_ovr and ovr + 5 < self.overall() and scouting in {"TOP BLUE", "FULL BLUE", "TOP RED", "FULL RED"}:
+        elif not real_ovr and ovr + 5 < self.overall(use_ovr) and scouting in {"TOP BLUE", "FULL BLUE", "TOP RED", "FULL RED"}:
             fill(255,100,100)
-        elif not real_ovr and ovr - 10 > self.overall() and scouting in {"FULL BLUE"}:
+        elif not real_ovr and ovr - 10 > self.overall(use_ovr) and scouting in {"FULL BLUE"}:
             fill(100,100,255)
-        elif not real_ovr and ovr - 5 > self.overall() and scouting in {"FULL RED", "FULL BLUE"}:
+        elif not real_ovr and ovr - 5 > self.overall(use_ovr) and scouting in {"FULL RED", "FULL BLUE"}:
             fill(255,100,100)
         rect(x,y, 140*sf, 165*sf, 7*sf)
         fill(0)
         textSize(20*sf)
         text(self.name(), x + 5*sf, y + 5*sf, 135*sf, 50*sf)
         info = "\n"
+        if self.years_played == 0:
+            info += "R"
         if self.depth > 0:
             info += "Start"
         elif self.depth < 0:
@@ -5910,7 +6166,7 @@ class Player(object):
         elif real_ovr:
             words += "Min: $" + str(round(self.min_contract()/1000000.0, 2)) + " mil"
         if real_ovr == True:
-            text("POSITION: " + str(self.position) + "\nOVR: " + str(int(round(self.get_overall(pos)))) + "\nAGE: " + str(self.age) + "\n" + words, x + 15*sf, y + 60*sf, 135*sf, 100*sf)
+            text("POSITION: " + str(self.position) + "\nOVR: " + str(int(round(self.get_overall(pos, use_ovr)))) + "\nAGE: " + str(self.age) + "\n" + words, x + 15*sf, y + 60*sf, 135*sf, 100*sf)
         else:
             text("POSITION: " + str(self.position) + "\nPROJ OVR: " + str(int(round(self.projected_ovr))) + "\nAGE: " + str(self.age) + "\n" + words, x + 15*sf, y + 60*sf, 135*sf, 100*sf)
         if self.upgrade_available():
@@ -5918,6 +6174,9 @@ class Player(object):
             circle(x + 20*sf, y + 150*sf, 20*sf)
         if self.contract_length <= 0:
             fill(255, 255, 0)
+            circle(x + 120*sf, y + 150*sf, 20*sf)
+        elif self.contract_length == 1:
+            fill(200, 0, 200)
             circle(x + 120*sf, y + 150*sf, 20*sf)
         if self.injured:
             fill(255, 85, 85)
@@ -5927,9 +6186,9 @@ class Player(object):
             circle(x + 120*sf, y + 40*sf, 15*sf)
     
     def upgrade_player(self, type, amount, upgrade_type, use_xp):
-        global c
+        global c, use_overall
         cost = self.xp_for_upgrade()
-        ovr = self.overall()
+        ovr = self.overall(use_overall)
         if ((self.upgrade_available() and use_xp) or not use_xp) and (amount < 0 or ovr < 99):
             if use_xp and not type == "injury":
                 self.xp -= cost
@@ -6014,11 +6273,23 @@ class Player(object):
             else:
                 println("ERROR in upgrade player: " + type)
         
-    def overall(self):
-        return self.get_overall(self.position)
+    def overall(self, using_ovr):
+        return self.get_overall(self.position, using_ovr)
     
-    def get_overall(self, pos):
-        global c
+    def get_overall(self, pos, using_ovr):
+        global c, season1
+        if not using_ovr:
+            try:
+                season1.this_year
+            except:
+                return 40
+            att3 = 1
+            if self.years_played < 2:
+                att3 = 100
+            ovr1, att1 = self.get_stat_rating("YEAR", pos, season1.this_year)
+            ovr2, att2 = self.get_stat_rating("YEAR", pos, season1.this_year-1)
+            ovr3 = self.projected_ovr
+            return divide_maybe_zero_default(ovr1*att1+ovr2*att2+ovr3*att3,att1+att2+att3,40)
         ovr = 0
         if pos == "QB":
             interception = reverse_stat_to_ovr(self.int_chance, c.int_avg, c.int_jump)
@@ -6167,9 +6438,9 @@ class Player(object):
         return True
         
     def expected_contract(self):
-        global c
+        global c, use_overall
         base = 100000 + 100000*self.years_played
-        ovr = max(55, self.get_overall(self.position))
+        ovr = max(55, self.get_overall(self.position, use_overall))
         bonus = (ovr - 55)**2 * 10000
         multiplier = c.contract_multiplier(self.position)
         if self.years_played == 0:
@@ -6491,8 +6762,8 @@ class Player(object):
         if self.punt_dist > 70:
             self.punt_dist = 70
         """
-        if not self.overall() == ovr:
-            self.change_overall( ovr - self.overall() )
+        if not self.overall(True) == ovr:
+            self.change_overall( ovr - self.overall(True) )
     
     def add_stats(self, type, amount, game_type, this_year):
         global c, ls
@@ -6505,6 +6776,10 @@ class Player(object):
         
         self.xp += total_xp
         ls.add_xp(self.position, total_xp)
+        fat = c.fatigue_calc(total_xp, self.position, self.stamina)
+        self.fatigue += fat
+        self.change_overall(-fat)
+        ls.add_fatigue(self.position, fat)
             
     def reset_game_stats(self):
         self.career_stats.reset_game_stats()
@@ -6536,8 +6811,10 @@ class Player(object):
 class Team(object):
     
     def __init__(self, name, place, abbrv):
+        global use_overall
         self.is_all_star_team =        False
         #self.all_stars_selected =      0
+        self.show_overall =            use_overall
         self.team_name =               name
         self.team_location =           place
         self.abbreviation =            abbrv
@@ -6550,10 +6827,11 @@ class Team(object):
         #self.fans =                    0
         self.scouting =                "NONE"
         self.negotiations =            10
+        self.resignings =              3
         self.fa_bids =                 0
         self.fas =                     0
         self.fa_pos =                  []
-        self.draft_picks =             [[1, abbrv, 1966], [2, abbrv, 1966], [3, abbrv, 1966], [4, abbrv, 1966], [5, abbrv, 1966], [6, abbrv, 1966], [7, abbrv, 1966]]
+        self.draft_picks =             [[1, abbrv, 1966], [2, abbrv, 1966], [3, abbrv, 1966], [4, abbrv, 1966], [5, abbrv, 1966], [6, abbrv, 1966], [7, abbrv, 1966], [1, abbrv, 1967], [2, abbrv, 1967], [3, abbrv, 1967], [4, abbrv, 1967], [5, abbrv, 1967], [6, abbrv, 1967], [7, abbrv, 1967]]
         self.user_type =              "AUTO"
         self.qb1 =                     Player("QB", 20)
         self.qb2 =                     Player("QB", 20)
@@ -6638,13 +6916,15 @@ class Team(object):
         self.o_form =                      "i"
         self.d_form =                      "3-4"
         self.buttons =                     []
-        #self.set_buttons()
+        self.set_buttons()
         
         
     def set_buttons(self):
-        x = 1000
-        y = 100
-        self.buttons.append( Button(x, y, 100, 50, "", "", "") )
+        global use_overall
+        x = 1100
+        y = 75
+        self.buttons.append( Button(x, y, 5, 5, "TOGGLE", "TOGGLE", "TEAM VIEW") )
+        self.buttons[0].highlight = use_overall
         
     def get_stat_rating(self, scope, stat, this_year = 0):
         return self.career_stats.get_stat_rating(scope, stat, this_year)
@@ -6829,7 +7109,7 @@ class Team(object):
             
     def __draw_player(self, player, x, y, real_ovr, scal, pos = "NONE"):
         try:
-            player.draw_player(x, y, real_ovr, scal, pos)
+            player.draw_player(x, y, real_ovr, scal, pos, self.show_overall)
         except:
             text("EMPTY", x, y)
             
@@ -6855,7 +7135,7 @@ class Team(object):
         return "NONE"            
     
     def draw_team(self, x, y, team, sort_type, sort_reverse):
-        global c, season1, user_teams
+        global c, season1, user_teams, use_overall
         textSize(25)
         text(self.name() + ": " + str(int(round(self.get_team_overall()))) + " OVR", x, y - 65)
         fill(150)
@@ -6887,20 +7167,21 @@ class Team(object):
         fill(0)
         text("BEST LINEUP", x + 1100, y - 75, 150, 50)
         textSize(25)
+        button_draw(self.buttons, "ALL")
         if team == "TRADE":
             x_val = x
             y_val = y
             for position in ["QB", "RB", "WR", "TE", "OL", "DL", "LB", "DB", "K", "RT"]:
                 for player in self.Players:
                     if player.position == position and player.is_tradeable():
-                        player.draw_player(x_val, y_val, True, 1)
+                        player.draw_player(x_val, y_val, True, 1, use_ovr = self.show_overall)
                         x_val += 150
                 y_val += 175
                 x_val = x
             y_val += 40
             for pick in self.draft_picks:
                 textSize(30)
-                text("Round " + str(pick[0]) + ", pick " + str(pick[1]), x_val, y_val)
+                text("Round " + str(pick[0]) + ", pick " + str(pick[1]) + ", " + str(pick[2]), x_val, y_val)
                 y_val += 40
         elif team == "MORE":
             fill(150)
@@ -6922,10 +7203,10 @@ class Team(object):
             text("K:  " + str(int(self.k_ovr)), x + 1100, y + 250)
             text("RT: " + str(int(self.rt_ovr)), x + 1100, y + 275)
             text("Draft picks: ", x + 1100, y + 325)
-            self.draft_picks.sort(key = lambda l: (by_list_index(l, 0), by_list_index(l, 1)), reverse = False)
+            self.draft_picks.sort(key = lambda l: (by_list_index(l,2), -season1.draft_pick_value(l)), reverse = False)
             offset = 0
             for pick in self.draft_picks:
-                text("     Round " + str(pick[0]) + ", pick " + str(pick[1]) + ", value: " + str(int(season1.draft_pick_value(pick))), x + 1100, y + 350 + 25*offset)
+                text("     Round " + str(pick[0]) + ", pick " + str(pick[1]) + ", " + str(pick[2]) + ", value: " + str(int(season1.draft_pick_value(pick))), x + 1100, y + 350 + 25*offset)
                 offset += 1
             if is_number(self.cap_left):
                 text("Cap remaining: " + str(round(self.cap_left/1000000.0, 2)) + " million", x + 5, y - 25)
@@ -6937,7 +7218,7 @@ class Team(object):
                 text("Max Offer: " + str(round(self.max_offer/1000000.0, 2)) + " million", x + 125, y + 5)
             else:
                 text("Max Offer: NA", x + 125, y + 5)
-            text("Players: " + str(len(self.Players)) + " Age: " + str(round(self.average_age(), 2)) + " Negotiations: " + str(self.negotiations), x + 5, y + 30)
+            text("Players: " + str(len(self.Players)) + " Age: " + str(round(self.average_age(), 2)) + " Negotiations: " + str(self.negotiations) + " Resigns: " + str(self.resignings), x + 5, y + 30)
             table_info = []
             text("SB:       " + str(self.career_stats.get_stat("SB CAREER", "WINS", season1.this_year))      + "-" + str(self.career_stats.get_stat("SB CAREER", "LOSSES", season1.this_year)),      675, 50 + scroll)
             text("Playoffs: " + str(self.career_stats.get_stat("PLAYOFF CAREER", "WINS", season1.this_year)) + "-" + str(self.career_stats.get_stat("PLAYOFF CAREER", "LOSSES", season1.this_year)), 675, 75 + scroll)
@@ -6951,7 +7232,7 @@ class Team(object):
                 text(str(a_year) + ":  " + str(record[0]) + "-" + str(record[1]) + "-" + str(record[2]), 675, 150 + 25*i + scroll)
             text("Now:       " + str(self.standings_data[1]) + "-" + str(self.standings_data[2]) + "-" + str(self.standings_data[3]), 675, 150 + 25 + scroll)
             for player in self.Players:
-                table_info.append([player.first_name + " " + player.last_name, player.position, player.get_overall(player.position), player.age, player.contract_length, str(round(player.contract_amount/1000000.0, 2)) + " million", player.get_value()])
+                table_info.append([player.first_name + " " + player.last_name, player.position, player.get_overall(player.position, use_overall), player.age, player.contract_length, str(round(player.contract_amount/1000000.0, 2)) + " million", player.get_value()])
             table_info.sort(key = lambda l: by_list_index(l, sort_type), reverse = not sort_reverse)
             draw_table_h(["Name", "POS", "OVR", "Age", "Length", "$", "Value"], [200, 50, 50, 50, 75, 125, 75], 25, table_info, x + 5, y + 35, [], True, sort_type)
         elif team == "STRATEGY":
@@ -7538,6 +7819,7 @@ class Team(object):
     def end_season(self):
         global season1
         self.negotiations = 10
+        self.resignings = 3
         self.season_records.append( [self.standings_data[1], self.standings_data[2], self.standings_data[3]] )
         self.standings_data = [self.name(), 0,0,0,0.000,0,0]
         #self.reset_season_stats()
@@ -7878,12 +8160,21 @@ class Team(object):
         self.calculate_cap_left()
         
     def sign_player(self, player, contract_len, contract_mon):
+        global season1
         if player.retired:
             return
         if not player.team == self.abbreviation:
             return
         self.calculate_cap_left()
         if self.max_offer == "NA" or contract_mon < self.max_offer:
+            try:
+                if season1.current_week == season1.resign_week:
+                    if self.resignings <= 0:
+                        return
+                    else:
+                        self.resignings -= 1
+            except:
+                pass
             player.sign_player(self.abbreviation, contract_len, contract_mon)
         self.calculate_cap_left()
         
@@ -8028,19 +8319,20 @@ class Team(object):
                     trade_center.recent_trades.append(trade_center.current_trade)
         
     def send_to_trade_block(self, trade_center):
+        global use_overall
         for player in self.Players:
             if player.is_tradeable() and not player.in_trade_block and player.get_value() > 2500:
                 if player.contract_amount > 2*player.expected_contract():
                     trade_center.add_to_trade_block(player)
                 elif player in {self.qb2, self.rb3, self.wr4, self.te2, self.te3, self.ol6, self.dl5, self.dl6, self.dl7, self.lb4, self.lb5, self.db5, self.db6, self.db7}:
-                    if player.contract_amount > 5000000 or player.overall() > 80 or player.age >= 33:
+                    if player.contract_amount > 5000000 or player.overall(use_overall) > 80 or player.age >= 33:
                         trade_center.add_to_trade_block(player)
                 elif player in self.bench:
-                    if player.contract_amount > 2000000 or player.overall() > 75 or player.age >= 30:
+                    if player.contract_amount > 2000000 or player.overall(use_overall) > 75 or player.age >= 30:
                         trade_center.add_to_trade_block(player)
             
     def add_free_agents(self):
-        global season1
+        global season1, use_overall
         did_bid = False
         ovrs = [[self.qb], [self.rb], [self.wr], [self.te], [self.ol], [self.dl], [self.lb], [self.db], [self.k_ovr], [self.rt_ovr]]
         ovrs.sort(key = lambda l: by_list_index(l, 0), reverse = False)
@@ -8048,10 +8340,10 @@ class Team(object):
         for ovr in ovrs:
             pos_ovrs.append(ovr[0])
         i = 0
-        while i < len(season1.free_agents.players) and season1.free_agents.players[i].get_overall(season1.free_agents.players[i].position) > pos_ovrs[0] - 2:
+        while i < len(season1.free_agents.players) and season1.free_agents.players[i].overall(use_overall) > pos_ovrs[0] - 2:
             if season1.free_agents.players[i].position in self.biggest_needs[0:5] and not season1.free_agents.players[i].position in self.full_positions():
                 k = self.biggest_needs.index(season1.free_agents.players[i].position)
-                if season1.free_agents.players[i].get_overall(season1.free_agents.players[i].position) > pos_ovrs[k] - 2:
+                if season1.free_agents.players[i].overall(use_overall) > pos_ovrs[k] - 2:
                     bid = min(season1.free_agents.players[i].min_contract(), self.max_offer)
                     if season1.free_agents.bids[i][0] >= bid:
                         bid = min(season1.free_agents.bids[i][0] + 500000, self.max_offer)
@@ -8081,7 +8373,7 @@ class Team(object):
         return did_bid
             
     def get_team_overall(self):
-        global c
+        global c, use_overall
         default_overall = 45
         
         position_overalls = [ default_overall, default_overall, default_overall, default_overall, default_overall, default_overall, default_overall, default_overall, 
@@ -8091,7 +8383,7 @@ class Team(object):
                               default_overall, default_overall, default_overall, default_overall, default_overall, default_overall, default_overall ]
         for i in range(0, len(self.line_up)):
             if not self.line_up[i] == None:
-                position_overalls[i] = self.line_up[i].overall()
+                position_overalls[i] = self.line_up[i].overall(use_overall)
                 
         self.qb = 0.97*position_overalls[0] + 0.03*position_overalls[1]
 
@@ -8274,12 +8566,17 @@ class TradeCenter(object):
             player.in_trade_block = True
             
     def remove_from_trade_block(self, player):
-        self.trade_block.remove(player)
+        try:
+            self.trade_block.remove(player)
+        except:
+            pass
         player.in_trade_block = False
             
     def end_season(self):
-        #self.recent_trades = []
-        pass
+        for player in self.trade_block:
+            if player.team in {"FREE AGENT", "ROOKIE", "RETIRED"}:
+                self.remove_from_trade_block(player)
+        self.trade_block.sort(key = by_overall, reverse = True)
         
     def end_week(self):
         for player in self.trade_block:
@@ -8318,6 +8615,7 @@ class TradeCenter(object):
         text("TRADE CENTER", 5, 75)
         
     def draw_trade_block(self, x, y):
+        global use_overall
         self.draw_buttons(self.buttons, "TRADE BLOCK")
         printed = 0
         i = 0
@@ -8327,7 +8625,7 @@ class TradeCenter(object):
                 player.in_trade_block = False
                 continue
             if self.search == player.position or self.search == "NONE":
-                player.draw_player(x + (printed % 9) * 150, y + (printed / 9) * 175, True, 1)
+                player.draw_player(x + (printed % 9) * 150, y + (printed / 9) * 175, True, 1, use_ovr = use_overall)
                 printed += 1
             i += 1
         fill(150)
@@ -8336,6 +8634,7 @@ class TradeCenter(object):
         text("Search:\npos: " + self.search, 1400, 50, 175, 75)
         
     def draw_trade_summary(self, trade, x, y, highlight = False):
+        global use_overall
         textSize(20)
         fill(150)
         if highlight:
@@ -8344,21 +8643,21 @@ class TradeCenter(object):
         fill(0)
         team1_trade = ""
         for player in trade.team1_offer[0]:
-            team1_trade += player.first_name + " " + player.position + " " + str(int(player.overall())) + ", "
+            team1_trade += player.first_name + " " + player.position + " " + str(int(player.overall(use_overall))) + ", "
         for pick in trade.team1_offer[1]:
             team1_trade += "Round " + str(pick[0]) + " pick " + str(pick[1]) + ", "
         text(trade.team1.abbreviation + " trades " + team1_trade[:-2], x + 20, y + 25)
         text("Net value: " + str(round(trade.get_value_from_team(1, True) + trade.get_value_from_team(1, False))), x + 20, y + 55)
         team2_trade = ""
         for player in trade.team2_offer[0]:
-            team2_trade += player.first_name + " " + player.position + " " + str(int(player.overall())) + ", "
+            team2_trade += player.first_name + " " + player.position + " " + str(int(player.overall(use_overall))) + ", "
         for pick in trade.team2_offer[1]:
             team2_trade += "Round " + str(pick[0]) + " pick " + str(pick[1]) + ", "
         text(trade.team2.abbreviation + " trades " + team2_trade[:-2], x + 20, y + 85)
         text("Net value: " + str(round(trade.get_value_from_team(2, True) + trade.get_value_from_team(2, False))), x + 20, y + 115)
         
     def draw_recent_trades(self, x, y):
-        global user_teams, user_team_number
+        global user_teams, user_team_number, use_overall
         self.draw_buttons(self.buttons, "RECENT TRADES")
         fill(0)
         textSize(50)
@@ -8390,6 +8689,7 @@ class TradeCenter(object):
                 x_now = x
                 
     def draw_trade_overview(self, x, y):
+        global use_overall
         self.draw_buttons(self.buttons, "TRADE OVERVIEW")
         #self.draw_buttons(self.overview_buttons)
         y_in = y
@@ -8406,7 +8706,7 @@ class TradeCenter(object):
         textSize(20)
         for player in self.current_trade.team1_offer[0]:
             y += 30
-            text(player.name() + player.position + " " + str(int(player.get_overall(player.position))) + " OVR " + str(player.age) + " YO " + str(player.contract_length) + "yrs, " + str(round(player.contract_amount/1000000.0,2)) + " mil", x + 20, y)
+            text(player.name() + player.position + " " + str(int(player.overall(use_overall))) + " OVR " + str(player.age) + " YO " + str(player.contract_length) + "yrs, " + str(round(player.contract_amount/1000000.0,2)) + " mil", x + 20, y)
         for pick in self.current_trade.team1_offer[1]:
             y += 30
             text("Round " + str(pick[0]) + ", pick " + str(pick[1]), x + 20, y)
@@ -8427,7 +8727,7 @@ class TradeCenter(object):
         textSize(20)
         for player in self.current_trade.team2_offer[0]:
             y += 30
-            text(player.name() + player.position + " " + str(int(player.get_overall(player.position))) + " OVR " + str(player.age) + " YO " + str(player.contract_length) + "yrs, " + str(round(player.contract_amount/1000000.0,2)) + " mil", x + 610, y)
+            text(player.name() + player.position + " " + str(int(player.overall(use_overall))) + " OVR " + str(player.age) + " YO " + str(player.contract_length) + "yrs, " + str(round(player.contract_amount/1000000.0,2)) + " mil", x + 610, y)
         for pick in self.current_trade.team2_offer[1]:
             y += 30
             text("Round " + str(pick[0]) + ", pick " + str(pick[1]), x + 610, y)
@@ -8620,7 +8920,7 @@ class Trade(object):
     def is_fair_draft_picks(self):
         team1_picks = len(self.team2_offer[1]) - len(self.team1_offer[1]) + len(self.team1.draft_picks)
         team2_picks = len(self.team1_offer[1]) - len(self.team2_offer[1]) + len(self.team2.draft_picks)
-        if team1_picks < 2 or team2_picks < 2 or team1_picks > 14 or team2_picks > 14:
+        if team1_picks < 4 or team2_picks < 4 or team1_picks > 21 or team2_picks > 21:
             return False
         return True
         
@@ -8800,17 +9100,17 @@ class FreeAgents(object):
         self.players = players
         self.bids = [[0,0]]*len(players)
         
-    def draw_free_agents(self, x, y, search, price):
+    def draw_free_agents(self, x, y, search, price, only_rookies = False):
         printed = 0
         i = 0
         for player in self.players:
-            if search == player.position and price >= max(self.bids[i][0], player.min_contract()):
+            if search == player.position and price >= max(self.bids[i][0], player.min_contract()) and (player.years_played == 0 or not only_rookies):
                 player.draw_player(x + (printed % 9) * 150, y + (printed / 9) * 175, True, 1)
                 if not (self.bids[i][0] == 0):
                     fill(0)
                     text(self.bids[i][1].abbreviation + " $" + str(round(self.bids[i][0]/1000000.0, 2)) + " mil", x + 5 + (printed % 9) * 150, y + 160 + (printed / 9) * 175)
                 printed += 1
-            elif search == "NONE" and price >= max(self.bids[i][0], player.min_contract()):
+            elif search == "NONE" and price >= max(self.bids[i][0], player.min_contract()) and (player.years_played == 0 or not only_rookies):
                 player.draw_player(x + (printed % 9) * 150, y + (printed / 9) * 175, True, 1)
                 if not (self.bids[i][0] == 0):
                     fill(0)
@@ -9049,6 +9349,7 @@ class Draft(object):
             new_player = Player(pos, ovr[0], ovr[1])
             new_player.draft_position[2] = self.this_year
             new_player.set_age(age)
+            new_player.adjust_ovr = min_max_skew(0,15)
             plyrs.append(new_player)
         if self.mega_draft:
             plyrs.sort(key = by_overall, reverse = True)
@@ -9081,19 +9382,20 @@ class Draft(object):
             self.is_done = True
             season1.free_agents.add_free_agents(self.players)
             for team in self.teams:
-                team.draft_picks = []
+                #team.draft_picks = []
                 if self.mega_draft:
                     for i in range(1, 8):
-                        team.draft_picks.append([i, team.abbreviation, self.this_year + 1])
+                        team.draft_picks.append([i, team.abbreviation, self.this_year + 2])
                 else:
                     for i in range(1, self.rounds + 1):
-                        team.draft_picks.append([i, team.abbreviation, self.this_year + 1])
+                        team.draft_picks.append([i, team.abbreviation, self.this_year + 2])
         else:
             for team in self.teams:
                 for pick in team.draft_picks:
                     if pick[0] == self.get_round() and pick[1] == self.get_pick() and pick[2] == self.this_year:
                         self.current_team = team
                         return
+        #print("error: pick: " + str(self.get_round()) + ", " + str(self.get_pick()) + str(self.this_year) + " not found")
         
 ################################################################################DRAFT CLASS###########################################################################################
 ################################################################################DRAFT CLASS###########################################################################################
@@ -9128,6 +9430,7 @@ class League_Stats(object):
         self.db_xp =                   0
         self.k_xp =                    0
         self.rt_xp =                   0
+        self.fatigues = {"QB":0,"RB":0,"WR":0,"TE":0,"OL":0,"DL":0,"LB":0,"DB":0,"K":0,"RT":0}
         self.numbers_scope =           0
         self.numbers_table_sort =      0
         self.numbers_sort_order =      True
@@ -9229,7 +9532,7 @@ class League_Stats(object):
         
     def get_top_rated(self, pos, scope, stat_type, conf, min_att, num_to_return, years_in_nfl):
         afc_teams = ["NE", "BUF", "MIA", "NYJ", "IND", "HOU", "JAX", "TEN", "PIT", "BAL", "CLE", "CIN", "KC", "LAC", "DEN", "LV"]
-        nfc_teams = ["WFT", "NYG", "DAL", "PHI", "NO", "TB", "CAR", "ATL", "GB", "MIN", "DET", "CHI", "SEA", "SF", "LAR", "ARI"]
+        nfc_teams = ["WAS", "NYG", "DAL", "PHI", "NO", "TB", "CAR", "ATL", "GB", "MIN", "DET", "CHI", "SEA", "SF", "LAR", "ARI"]
         offense = ["QB", "RB", "WR", "TE", "OL"]
         defense = ["DL", "LB", "DB"]
         
@@ -9388,7 +9691,7 @@ class League_Stats(object):
         self.buttons.append(Button(x + 100, y, 100, 25, "Panthers", "CAR", "TEAM"))
         y += 25
         self.buttons.append(Button(x,        y, 100, 25, "Patriots", "NE", "TEAM"))
-        self.buttons.append(Button(x + 100, y, 100, 25, "WFT", "WFT", "TEAM"))
+        self.buttons.append(Button(x + 100, y, 100, 25, "WAS", "WAS", "TEAM"))
         y += 25
         self.buttons.append(Button(x,       y, 100, 25, "Raiders", "LV", "TEAM"))
         self.buttons.append(Button(x + 100, y, 100, 25, "Rams", "LAR", "TEAM"))
@@ -9481,7 +9784,20 @@ class League_Stats(object):
             for player in team.Players:
                 if not (player in self.all_players):
                     self.all_players.append(player)
-        self.get_retired()            
+        self.get_retired()     
+        self.cut_extras()
+        
+    def cut_extras(self):
+        min_att = 5
+        for player in self.all_players:
+            if player.retired:
+                is_important = False
+                for stat in ["THROW", "RECEIVE", "RUN", "BLOCK", "COVER", "BLITZ", "XP", "FG", "PUNT", "KICK OFF", "RETURN", "2pt"]:
+                    if player.has_stats_min_att("CAREER", type, 0, min_att, False):
+                        is_important = True
+                        break
+                if not is_important:
+                    self.players.remove(player)
         
     def draw_leaders(self, x, y, buttons = "SELF", scope = "", positions = [], stats = [], num_leaders = 10, min_attempts = 1, teams = [], rounds = [], is_drafted_team = False, add_on_stat = "", this_year = "SELF", show_players = True):
         if buttons == "SELF":
@@ -9544,6 +9860,8 @@ class League_Stats(object):
                 for player in self.all_players:
                     if (player.has_stats_min_att(stat, self.numbers_scope, this_year, min_attempts) or stat in {"MISC", "OVERALL"}) and (player.position in positions or "ALL" in positions) and (player.draft_position[0] in rounds or 8 in rounds) and ((not is_drafted_team and player.team in teams or "ALL" in teams or ("ACTIVE" in teams and not player.team == "RETIRED")) or (is_drafted_team and (player.drafted_by in teams or "ALL" in teams))):
                         players.append(player)
+                if (len(players) > 250 and stat in ["RATINGS1", "RATINGS2"]):
+                    return
                 make_stats_table_h(stat, self.numbers_scope, this_year, players, x + 5, y + buffer + 20 * num_players, self.numbers_table_sort, self.numbers_sort_order, num_leaders, True, True)
                 num_players += min(num_leaders, len(players))
                 buffer += 50
@@ -9556,7 +9874,6 @@ class League_Stats(object):
                 num_teams += 32
                 buffer += 50
             
-        
     def total_players(self):
         return len(self.all_players)
     
@@ -9569,6 +9886,9 @@ class League_Stats(object):
     
     def total_xp(self):
         return self.qb_xp + self.rb_xp + self.wr_xp + self.te_xp + self.ol_xp + self.dl_xp + self.lb_xp + self.db_xp + self.k_xp + self.rt_xp
+    
+    def add_fatigue(self, position, amount):
+        self.fatigues[position] = amount
     
     def add_xp(self, position, amount):
         if position == "QB":
@@ -9619,7 +9939,10 @@ class League_Stats(object):
         text("Retired: " + str(self.retired), x + 5, y + 280)
         text("Active: " + str(self.total_players() - self.retired), x + 5, y + 300)
         
-        
+        for pos in self.fatigues:
+            y += 20
+            text(pos + "s: " + str(int(self.fatigues[pos])), x+135, y)        
+        """
         text("XP: " + str(int(self.total_xp())), x + 115, y + 20)
         text("QBs: " + str(int(self.qb_xp) / 6), x + 135, y + 40)
         text("RBs: " + str(int(self.rb_xp) / 12), x + 135, y + 60)
@@ -9631,6 +9954,7 @@ class League_Stats(object):
         text("DBs: " + str(int(self.db_xp) / 44), x + 135, y + 180)
         text("Ks: " + str(int(self.k_xp) / 6), x + 135, y + 200)
         text("RTs: " + str(int(self.rt_xp) / 3), x + 135, y + 220)
+        """
 
 ################################################################################LEAGUE STATS CLASS###########################################################################################
 ################################################################################LEAGUE STATS CLASS###########################################################################################
@@ -9708,28 +10032,28 @@ class Constants(object):
         self.block_chance_avg =     93.3
         self.block_jump =           0.4
         self.sack_avg =             6.7
-        self.rating_sack_avg =      1.45
+        self.rating_sack_avg =      1.5
         self.sack_jump =            0.4
         self.int_avg =              2.5
         self.int_jump =             0.1
-        self.complete_avg =         60.0
-        self.complete_jump =        0.5
+        self.complete_avg =         59.5
+        self.complete_jump =        0.4
         self.scramble_avg =         4.0
         self.scramble_jump =        0.5
-        self.air_yds_avg =          7.2
-        self.air_yds_jump =         0.2
+        self.air_yds_avg =          7.1
+        self.air_yds_jump =         0.15
         self.fumble_avg =           1.0
         self.fumble_jump =          0.1
         self.drop_avg =             5.0
         self.drop_jump =            0.3
-        self.YAC_avg =              4.2
-        self.YAC_jump =             0.2
-        self.run_avg =              4.3
-        self.run_jump =             0.15
-        self.fg_range_avg =         48.0
+        self.YAC_avg =              4.0
+        self.YAC_jump =             0.15
+        self.run_avg =              4.25
+        self.run_jump =             0.13
+        self.fg_range_avg =         54.0
         self.rating_fg_range_avg =  30.0
-        self.fg_range_jump =        0.2
-        self.fg_chance_avg =        88.0
+        self.fg_range_jump =        0.25
+        self.fg_chance_avg =        90.0
         self.fg_chance_jump =       0.3
         self.punt_avg =             45.0
         self.rating_punt_avg =      35.0
@@ -9779,11 +10103,11 @@ class Constants(object):
         
     def clock_runoff(self, play_type, distance):
         if play_type == "PASS":
-            return 5.0*random(0.5, 1.5)*log(0.1*abs(distance) + math.e)
+            return 8.0*random(0.5, 1.5)*log(0.1*abs(distance) + math.e)
         elif play_type == "RUN":
-            return 5.0*random(0.5, 1.5)*log(0.15*abs(distance) + math.e)
+            return 8.0*random(0.5, 1.5)*log(0.15*abs(distance) + math.e)
         elif play_type == "SCRAMBLE":
-            return 5.0*random(1.0, 2.0)*log(abs(distance) + math.e)
+            return 8.0*random(1.0, 2.0)*log(abs(distance) + math.e)
         elif play_type in {"EXTRA POINT"}:
             return 0.0
         elif play_type == "PUNT":
@@ -9854,30 +10178,60 @@ class Constants(object):
             print("error: unknown stat in stat_xp - " + str(stat))
             return 0.0
         
-    def position_xp_multiplier(self, pos):
+    def fatigue_calc(self, xp, pos, stamina):
+        multip = 0
         if pos == "QB":
-            return 0.955
+            multip = 0.700
         elif pos == "WR":
-            return 0.575
+            multip = 2.000
         elif pos == "RB":
-            return 0.855
+            multip = 1.300
         elif pos == "TE":
-            return 0.820
+            multip = 1.300
         elif pos == "OL":
-            return 0.290
+            multip = 4.000
         elif pos == "DL":
-            return 0.460
+            multip = 2.000
         elif pos == "LB":
-            return 1.600
+            multip = 0.700
         elif pos == "DB":
-            return 1.105
+            multip = 0.900
         elif pos == "K":
-            return 1.250
+            multip = 0.750
         elif pos == "RT":
-            return 1.000
+            multip = 1.000
         else:
             print("error: unknown position - " + str(pos))
             return 0.0
+        return max(0, xp*multip*0.01*(1-(0.1*stamina**1.2)/100.0))
+        
+        
+    def position_xp_multiplier(self, pos):
+        multip = 0
+        if pos == "QB":
+            multip = 0.955
+        elif pos == "WR":
+            multip = 0.555
+        elif pos == "RB":
+            multip = 0.855
+        elif pos == "TE":
+            multip = 0.800
+        elif pos == "OL":
+            multip = 0.290
+        elif pos == "DL":
+            multip = 0.460
+        elif pos == "LB":
+            multip = 1.600
+        elif pos == "DB":
+            multip = 1.105
+        elif pos == "K":
+            multip = 1.250
+        elif pos == "RT":
+            multip = 1.000
+        else:
+            print("error: unknown position - " + str(pos))
+            return 0.0
+        return multip*0.95
         
     def game_xp_multiplier(self, game):
         if game == "PRE SEASON":
