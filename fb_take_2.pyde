@@ -1,5 +1,6 @@
 import random as r
 import math
+import pickle
 
 # Potential
 # Effectiveness
@@ -52,13 +53,13 @@ def settings():
     user_cap = 200000000
     use_overall = True
     #                  x    y     w  h   t            d    c
-    buttons = [Button(100, 120, 200, 50, "Very High", 85, "DIFFICULTY OVR"),       Button(100, 170, 200, 50, "High", 80, "DIFFICULTY OVR"),               Button(100, 220, 200, 50, "Normal", 75, "DIFFICULTY OVR"),              Button(100, 270, 200, 50, "Low", 70, "DIFFICULTY OVR"),                  Button(100, 320, 200, 50, "Very Low", 55, "DIFFICULTY OVR"),           Button(100, 370, 200, 50, "Mega Draft", 0, "DIFFICULTY OVR"),
+    buttons = [Button(100, 120, 200, 50, "Very High", 85, "DIFFICULTY OVR"),       Button(100, 170, 200, 50, "High", 80, "DIFFICULTY OVR"),               Button(100, 220, 200, 50, "Normal", 75, "DIFFICULTY OVR"),              Button(100, 270, 200, 50, "Low", 70, "DIFFICULTY OVR"),                  Button(100, 320, 200, 50, "Very Low", 55, "DIFFICULTY OVR"),           Button(100, 370, 200, 50, "Mega Draft", 0, "DIFFICULTY OVR"), Button(100,420,200,50,"Load File",-1,"DIFFICULTY OVR"),
                Button(500, 120, 200, 50, "None", "NONE", "DIFFICULTY DRAFT"),      Button(500, 170, 200, 50, "Full Red", "FULL RED", "DIFFICULTY DRAFT"), Button(500, 220, 200, 50, "Top Red", "TOP RED", "DIFFICULTY DRAFT"),    Button(500, 270, 200, 50, "Full Blue", "FULL BLUE", "DIFFICULTY DRAFT"), Button(500, 320, 200, 50, "Top Blue", "TOP BLUE", "DIFFICULTY DRAFT"),
                Button(900, 120, 200, 50, "Standard", 200000000, "DIFFICULTY CAP"), Button(900, 170, 200, 50, "Bonus", 250000000, "DIFFICULTY CAP"),       Button(900, 220, 200, 50, "Double bonus", 300000000, "DIFFICULTY CAP"), Button(900, 270, 200, 50, "None", "NONE", "DIFFICULTY CAP"), 
                Button(1300,120, 200, 50, "1 User Team", 1, "DIFFICULTY TEAMS"),    Button(1300,170, 200, 50, "2 User Teams", 2, "DIFFICULTY TEAMS"),      Button(1300,220, 200, 50, "3 User Teams", 3, "DIFFICULTY TEAMS"),      Button(1300,270, 200, 50, "4 User Teams", 4, "DIFFICULTY TEAMS"),      Button(1300,320, 200, 50, "32 User Teams", 32, "DIFFICULTY TEAMS"), 
                Button(500, 500, 200, 50, "CONTINUE", "CONTINUE", "DIFFICULTY CONTINUE"),
                Button(1600,  0, 100, 50, "SEASON",   "SEASON",   "NAVIGATION") ]
-    for i in {5, 8, 11, 15}:
+    for i in [5, 9, 12, 16]:
         buttons[i].highlight = True
     names = loadStrings("maddenNames.csv")
     first_names = []
@@ -87,7 +88,7 @@ def settings():
     
     chiefs = Team("Chiefs", "Kansas City", "KC")
     chargers = Team("Chargers", "Los Angeles", "LAC")
-    raiders = Team("Raiders", "Los Vegas", "LV")
+    raiders = Team("Raiders", "Las Vegas", "LV")
     broncos = Team("Broncos", "Denver", "DEN")
     afc_w = [chiefs, chargers, raiders, broncos]
     
@@ -155,7 +156,7 @@ def draw():
     else:
         background(100)
         text(current_screen, 50, 50)
-    if not (current_screen == "HOME" or current_screen == "CHOOSE YOUR TEAM" or (current_screen == "GAME" and not game1.game_over)): #or (current_screen == "DRAFT" and not draft1.is_done)
+    if not (current_screen == "SEASON" or current_screen == "CHOOSE YOUR TEAM" or (current_screen == "GAME" and not game1.game_over)): #or (current_screen == "DRAFT" and not draft1.is_done)
         for button in buttons:
             if button.category == "NAVIGATION":
                 button.draw_button()
@@ -362,6 +363,10 @@ def __draw_season_screen():
     rect(1000, 550, 100, 100, 7)
     fill(0)
     text("TRADE CENTER", 1000, 550, 100, 100)
+    fill(150)
+    rect(1000, 700, 100, 100, 7)
+    fill(0)
+    text("SAVE FILE", 1000, 700, 100, 100)
     """
     if season1.current_week > 0 and season1.current_week < season1.wildcard_week:
         ls.draw_leaders_ffp("GAME", ls.this_year, 1300, 100, 3, False)
@@ -372,22 +377,22 @@ def __draw_season_screen():
     """
                 
 def __draw_team_screen():
-    global afc_e, afc_s, afc_n, afc_w, nfc_e, nfc_s, nfc_n, nfc_w
+    global season1
     temp = []
-    temp.extend(afc_e)
-    temp.extend(afc_s)
-    temp.extend(afc_n)
-    temp.extend(afc_w)
-    temp.extend(nfc_e)
-    temp.extend(nfc_s)
-    temp.extend(nfc_n)
-    temp.extend(nfc_w)
+    temp.extend(season1.afc_east)
+    temp.extend(season1.afc_south)
+    temp.extend(season1.afc_north)
+    temp.extend(season1.afc_west)
+    temp.extend(season1.nfc_east)
+    temp.extend(season1.nfc_south)
+    temp.extend(season1.nfc_north)
+    temp.extend(season1.nfc_west)
     for i in range(0, len(temp)):
         temp[i].draw_team_summary(5 + (i % 4) * 200, 5 + (i / 4) * 200 + scroll)
     
 def mouseClicked():
     global game1, draft1, draft_sort, all_teams, first_draft, home_team, away_team, afc_e, afc_n, afc_s, afc_w, nfc_e, nfc_n, nfc_s, nfc_w, season1, is_first_season, user_teams, user_team_number, team_phase, player_team, team_sort_type, team_sort_reverse, team_schedule, fa_sort, fa_price, ls, user_overall, buttons, scouting, user_cap, scroll, side_scroll, view_as, only_rookies
-    if  not (current_screen == "HOME" or current_screen == "CHOOSE YOUR TEAM" or (current_screen == "GAME" and not game1.game_over)):
+    if  not (current_screen == "SEASON" or current_screen == "CHOOSE YOUR TEAM" or (current_screen == "GAME" and not game1.game_over)):
         clicked = button_clicked(mouseX, mouseY, buttons, "NAVIGATION", "NONE")
         if not clicked == "":
             if current_screen == "GAME":
@@ -416,14 +421,14 @@ def mouseClicked():
         y = (mouseY - scroll) / 200
         team_num = 4*y + x
         temp = []
-        temp.extend(afc_e)
-        temp.extend(afc_s)
-        temp.extend(afc_n)
-        temp.extend(afc_w)
-        temp.extend(nfc_e)
-        temp.extend(nfc_s)
-        temp.extend(nfc_n)
-        temp.extend(nfc_w)
+        temp.extend(season1.afc_east)
+        temp.extend(season1.afc_south)
+        temp.extend(season1.afc_north)
+        temp.extend(season1.afc_west)
+        temp.extend(season1.nfc_east)
+        temp.extend(season1.nfc_south)
+        temp.extend(season1.nfc_north)
+        temp.extend(season1.nfc_west)
         if team_num < len(temp) and x < 4:
             change_screen(temp[team_num])
     elif current_screen == "CHOOSE HOME":
@@ -472,6 +477,11 @@ def mouseClicked():
                 change_screen("CHOOSE GAME")
         if mouseX > 1000 and mouseX < 1100 and mouseY > 550 and mouseY < 650:
             change_screen("TRADE CENTER")
+        if mouseX > 1000 and mouseX < 1100 and mouseY > 700 and mouseY < 800:
+            with open("file1.pckl","wb") as f:
+                print("saving")
+                pickle.dump((season1,ls,draft1),f)
+            print("saved")
         if mouseX > 1150 and mouseX < 1250 and mouseY > 550 and mouseY < 650:
             change_screen("LEAGUE STATS")
         x = mouseX - 10
@@ -571,7 +581,25 @@ def mouseClicked():
             user_team_number = clicked
         clicked = button_clicked(mouseX, mouseY, buttons, "DIFFICULTY CONTINUE", "NONE")
         if clicked == "CONTINUE":
-            change_screen("CHOOSE YOUR TEAM")
+            if user_overall == -1:
+                with open("file1.pckl","rb") as f:
+                    print("loading")
+                    season1,ls,draft1 = pickle.load(f)
+                    print("load 1")
+                    all_teams = season1.teams
+                    user_teams = []
+                    for team in all_teams:
+                        if team.user_type == "USER":
+                            user_teams.append(team)
+                    is_first_season = False
+                    for i in range(0, user_team_number):
+                        buttons.append(Button(450 + (85 * i) % 1360, 900 + 35*(i/16), 85, 35, str(i+1) + ". " + user_teams[i].abbreviation, i, "CHANGE TEAMS"))
+                    buttons.append(Button(425, 875, min(50 + 85*user_team_number, 1385), 85 + 35*(user_team_number/16), "", "BUFFER", "CHANGE TEAMS"))
+                    user_team_number = 0
+                print("loaded")
+                change_screen("SEASON")
+            else:
+                change_screen("CHOOSE YOUR TEAM")
     elif is_team(current_screen):
         if "TOGGLE" == button_clicked(mouseX, mouseY, current_screen.buttons, "ALL", "FLIP"):
             current_screen.show_overall = not current_screen.show_overall
@@ -2623,7 +2651,10 @@ class Game(object):
                 self.check_for_change_of_possession()
                 self.update_down_and_distance(self.play.play_gain)
                 if self.running_clock:
-                    self.run_clock(random(25, 39))
+                    if self.quarter in [2,4] and self.seconds_left < 120 and self.offense_score() <= self.defense_score():
+                        self.run_clock(random(3,7))
+                    else:
+                        self.run_clock(random(30, 39))
         if not self.game_over:
             self.reset_buttons()
             self.play.do_the_stats_thing(self.game_type, self.this_year)
@@ -5262,6 +5293,7 @@ class Player(object):
         self.years_played =               0
         self.retired =                    False
         self.xp =                         0
+        self.total_xp =                   0
         self.upgrade_type =               rand_ability_type()
         self.team =                       "ROOKIE"
         self.projected_ovr =              proj_ovr
@@ -5314,12 +5346,12 @@ class Player(object):
         self.punt_dist =                  rand_stat(ovr, c.punt_avg, c.punt_jump)
         self.stdev_punt_dist =            random(5,10)
         self.kick_return_allowed =        reverse_stat(ovr, c.return_avg, c.return_jump)
-        self.stdev_kick_return_allowed =  random(6,20)
+        self.stdev_kick_return_allowed =  random(10,25)
         self.touchback_forced_chance =    rand_stat(ovr, c.touchback_avg, c.touchback_jump)
         self.onside_kick_chance =         rand_stat(ovr, c.onside_avg, c.onside_jump)
         self.pin_chance =                 rand_stat(ovr, c.pin_avg, c.pin_jump)
         self.kick_return_dist =           rand_stat(ovr, c.return_avg, c.return_jump)
-        self.stdev_kick_return_dist =     random(6,20)
+        self.stdev_kick_return_dist =     random(10,25)
         self.touchback_chance =           reverse_stat(ovr, c.touchback_avg, c.touchback_jump)
         self.career_stats =               Stats()
         #self.record_stats =               [[c.wins, c.losses - 1, c.ties - 2, c.seasons - 3, c.superbowls - 4], [c.wins, c.losses - 1, c.ties - 2, c.seasons - 3, c.superbowls - 4], [c.wins, c.losses - 1, c.ties - 2, c.seasons - 3, c.superbowls - 4], [c.wins, c.losses - 1, c.ties - 2, c.seasons - 3, c.superbowls - 4] ]
@@ -5502,13 +5534,25 @@ class Player(object):
             type = "SB"
         elif season1.current_week >= season1.wildcard_week:
             type = "PLAYOFF"
-        new_fat = max(0,self.fatigue-5)
+        fat_gain = 5
+        age_range = self.age_range()
+        if age_range == "YOUNG":
+            fat_gain = 6
+        elif age_range == "MED":
+            fat_gain = 5
+        elif age_range == "OLD":
+            fat_gain = 3
+        elif age_range == "RETIRING":
+            fat_gain = 1
+        new_fat = max(0,self.fatigue-fat_gain)
         self.change_overall(self.fatigue-new_fat)
         self.fatigue = new_fat
         self.career_stats.add_stat("OVERALL", self.overall(use_overall), type, season1.this_year)
         self.career_stats.add_stat("TEAM", self.team, type, season1.this_year)
-        if self.age_range() == "YOUNG" and not self.team == "FREE AGENT":
-            self.xp += 30 * c.position_xp_multiplier(self.position)
+        if age_range == "YOUNG" and not self.team == "FREE AGENT":
+            xp = 30 * c.position_xp_multiplier(self.position)
+            self.xp += xp
+            self.total_xp += xp
             self.adjust_to_team()
         if self.injured:
             self.injury_length -= 1
@@ -5872,7 +5916,7 @@ class Player(object):
             text("Contract: " + str(self.contract_length) + " years, $" + str(round(self.contract_amount/1000000.0, 2)) + " million", x + 500, y + 90)
         else:
             text("Contract: " + str(self.contract_length) + " years, $" + str(round(self.contract_amount/1000000.0, 2)) + " million", x + 5, y + 90)
-        text("XP: " + str(int(round(self.xp))) + " Skips: " + str(self.skip_years), x + 5, y + 120)
+        text("XP: " + str(int(round(self.xp))) + "/" + str(int(round(self.total_xp))) + " Skips: " + str(self.skip_years), x + 5, y + 120)
         text("XP to next level: " + str(int(round(self.xp_for_upgrade()))), x + 5, y + 150)
         if self.injured:
             text("Injured for " + str(self.injury_length) + " weeks (-" + str(int(self.injury_amount)) + " ovr), fatigue: " + str(round(self.fatigue,2)), x + 5, y + 180)
@@ -6178,73 +6222,74 @@ class Player(object):
                     self.injury_chance -= c.injury_jump*up_amount
                 if self.injury_chance <= 0.0001:
                     self.injury_chance = 0.0001
-            elif type == "block chance" or type == "all":
+            if type == "block chance" or type == "all":
                 self.block_chance += c.block_jump*up_amount
-            elif type == "sack allowed chance" or type == "all":        
+            if type == "sack allowed chance" or type == "all":        
                 self.sack_allowed_chance -= c.sack_jump*up_amount
-            elif type == "int throw" or type == "all":
+            if type == "int throw" or type == "all":
                 self.int_chance -= c.int_jump*up_amount
-            elif type == "complete chance" or type == "all":
+            if type == "complete chance" or type == "all":
                 self.complete_chance += c.complete_jump*up_amount
-            elif type == "air yds throw" or type == "all":
+            if type == "air yds throw" or type == "all":
                 self.air_yds_throw += c.air_yds_jump*up_amount
-            elif type == "fumble chance" or type == "all":
+            if type == "fumble chance" or type == "all":
                 self.fumble_chance -= c.fumble_jump*up_amount
-            elif type == "drop chance" or type == "all":
+            if type == "drop chance" or type == "all":
                 if self.drop_chance <= 0.01:
-                    self.xp += cost
+                    if use_xp:
+                        self.xp += cost
                 else:
                     self.drop_chance -= c.drop_jump*up_amount
                 if self.drop_chance <= 0.01:
                     self.drop_chance = 0.01
-            elif type == "target dist" or type == "all":
+            if type == "target dist" or type == "all":
                 self.target_dist += c.air_yds_jump*up_amount
-            elif type == "yac" or type == "all":
+            if type == "yac" or type == "all":
                 self.YAC += c.YAC_jump*up_amount
-            elif type == "run dist" or type == "all":
+            if type == "run dist" or type == "all":
                 self.run_dist += c.run_jump*up_amount
-            elif type == "air yds allowed" or type == "all":
+            if type == "air yds allowed" or type == "all":
                 self.air_yds_allowed -= c.air_yds_jump*up_amount
-            elif type == "int catch chance" or type == "all":
+            if type == "int catch chance" or type == "all":
                 self.int_catch_chance += c.int_jump*up_amount
-            elif type == "complete chance allowed" or type == "all":
+            if type == "complete chance allowed" or type == "all":
                 self.complete_chance_allowed -= c.complete_jump*up_amount
-            elif type == "yac allowed" or type == "all":
+            if type == "yac allowed" or type == "all":
                 self.YAC_allowed -= c.YAC_jump*up_amount
-            elif type == "sack chance" or type == "all":
+            if type == "sack chance" or type == "all":
                 self.sack_chance += c.sack_jump*up_amount
-            elif type == "blocked chance" or type == "all":
+            if type == "blocked chance" or type == "all":
                 self.blocked_chance -= c.block_jump*up_amount
-            elif type == "run dist allowed" or type == "all":
+            if type == "run dist allowed" or type == "all":
                 self.run_dist_allowed -= c.run_jump*up_amount
-            elif type == "ff chance" or type == "all":
+            if type == "ff chance" or type == "all":
                 self.ff_chance += c.fumble_jump*up_amount
-            elif type == "fg range" or type == "all":
+            if type == "fg range" or type == "all":
                 if self.fg_range > 66:
-                    self.xp += cost
+                    if use_xp:
+                        self.xp += cost
                 else:
                     self.fg_range += c.fg_range_jump*up_amount
-            elif type == "fg made chance" or type == "all":
+            if type == "fg made chance" or type == "all":
                 self.fg_made_chance += c.fg_chance_jump*up_amount
-            elif type == "punt dist" or type == "all":
+            if type == "punt dist" or type == "all":
                 if self.punt_dist > 69:
-                    self.xp+= cost
+                    if use_xp:
+                        self.xp+= cost
                 else:
                     self.punt_dist += c.punt_jump*up_amount
-            elif type == "kick return allowed" or type == "all":
+            if type == "kick return allowed" or type == "all":
                 self.kick_return_allowed -= c.return_jump*up_amount
-            elif type == "tb forced chance" or type == "all":
+            if type == "tb forced chance" or type == "all":
                 self.touchback_forced_chance += c.touchback_jump*up_amount
-            elif type == "pin chance" or type == "all":
+            if type == "pin chance" or type == "all":
                 self.pin_chance += c.pin_jump*up_amount
-            elif type == "kick return dist" or type == "all":
+            if type == "kick return dist" or type == "all":
                 self.kick_return_dist += c.return_jump*up_amount
-            elif type == "tb chance" or type == "all":
+            if type == "tb chance" or type == "all":
                 self.touchback_chance -= c.touchback_jump*up_amount
-            elif type == "onside kick" or type == "all":
+            if type == "onside kick" or type == "all":
                 self.onside_kick_chance += c.onside_jump*up_amount
-            else:
-                println("ERROR in upgrade player: " + type)
         
     def overall(self, using_ovr):
         return self.get_overall(self.position, using_ovr)
@@ -6748,8 +6793,9 @@ class Player(object):
         total_xp =            max(0, xp_boost * position_multiplier * game_multiplier)
         
         self.xp += total_xp
+        self.total_xp += total_xp
         ls.add_xp(self.position, total_xp)
-        fat = c.fatigue_calc(total_xp, self.position, self.stamina)
+        fat = c.fatigue_calc(total_xp, self.position, self.stamina, game_type)
         self.fatigue += fat
         self.change_overall(-fat)
         ls.add_fatigue(self.position, fat)
@@ -6872,17 +6918,7 @@ class Team(object):
         self.standings_data =          [self.name(), 0,0,0,0.000,0,0]
         self.season_records =          []
         self.div_finish =              []
-        self.pass_chance =                 random(58, 67)
-        self.man_chance =                  random(30,70)
-        self.offense_formation_chance =    [25, 25, 25, 25]
-        self.defense_formation_chance =    [17, 17, 17, 17, 16, 16]
-        self.blitzers_chance =             [50, 25, 20, 5]
-        self.plays_per_game =              random(115, 140)
-        self.fourth_down_attempt_chance =  random(0,25)
-        self.fourth_down_attempt_dist =    random(0,3)
-        self.fave_targets =                [16, 19, 25, 17, 0, 8, 15]
-        self.scramble_chance =             2
-        self.rb1_chance =                  70
+        self.set_strategy()
         self.numbers_scope =               "GAME"
         self.numbers_table_sort =          0
         self.numbers_sort_order =          False
@@ -6891,6 +6927,27 @@ class Team(object):
         self.buttons =                     []
         self.set_buttons()
         
+    def set_strategy(self):
+        self.pass_chance =                 random(58, 67)
+        self.man_chance =                  random(30,70)
+        self.offense_formation_chance =    [15, 35, 25, 25]
+        if random(1) < 0.5:
+            self.defense_formation_chance =    [10, 15, 35, 20, 10, 10]
+        else:
+            self.defense_formation_chance =    [10, 35, 15, 20, 10, 10]
+        if random(1) < 0.5:
+            self.blitzers_chance =         [50, 25, 20, 5]
+        else:
+            self.blitzers_chance =         [20, 45, 25, 10]
+        self.plays_per_game =              random(115, 140)
+        self.fourth_down_attempt_chance =  random(0,25)
+        self.fourth_down_attempt_dist =    random(0,3)
+        if random(1) < 0.5:
+            self.fave_targets =            [22, 17/0.85, 15/0.5, 21/0.65, 0, 15, 10/0.5] # x1, x.85, x.50, x.65, x0, x1, x.5
+        else:
+            self.fave_targets =            [30, 17/0.85, 15/0.5, 16/0.65, 0,  9, 13/0.5]
+        self.scramble_chance =             2
+        self.rb1_chance =                  random(60,75)
         
     def set_buttons(self):
         global use_overall
@@ -7553,15 +7610,30 @@ class Team(object):
         elif index == 33:
             self.rb1_chance -= 0.5 * add_sub
             
-        for l in [self.offense_formation_chance, self.fave_targets, self.defense_formation_chance, self.blitzers_chance]:
+        for l in [self.offense_formation_chance, self.defense_formation_chance, self.blitzers_chance]:
             fix_list_chances(l)
+        self.fix_targets_chances()
         self.rb1_chance = bound(self.rb1_chance)
         self.man_chance = bound(self.man_chance)
         self.scramble_chance = bound(self.scramble_chance)
         self.fourth_down_attempt_chance = bound(self.fourth_down_attempt_chance)
         self.fourth_down_attempt_dist = bound(self.fourth_down_attempt_dist)
         self.pass_chance = bound(self.pass_chance)
-
+    
+    def fix_targets_chances(self):
+        for i in range(len(self.fave_targets)):
+            if self.fave_targets[i] < 0:
+                self.fave_targets[i] = 0
+        total = self.fave_targets[0] + \
+                self.fave_targets[1]*(1-self.offense_formation_chance[0]/100.0) + \
+                self.fave_targets[2]*(  self.offense_formation_chance[2]/100.0 + self.offense_formation_chance[3]/100.0) + \
+                self.fave_targets[3]*(1-self.offense_formation_chance[1]/100.0) + \
+                self.fave_targets[4]*0 + \
+                self.fave_targets[5] + \
+                self.fave_targets[6]*(self.offense_formation_chance[0]/100.0 + self.offense_formation_chance[1]/100.0)
+        multip = 100.0/total
+        for i in range(len(self.fave_targets)):
+            self.fave_targets[i] *= multip
         
     def _check_player(self, x, y, p_x, p_y):
         if x > p_x and x < p_x + 140*0.75 and y > p_y and y < p_y + 165*0.75:
@@ -7804,6 +7876,8 @@ class Team(object):
         self.calculate_cap_left()
     
     def week_over(self):
+        if self.user_type == "AUTO":
+            self.set_strategy()
         self.fa_pos = []
         self.calculate_cap_left()
         for player in self.Players:
@@ -9437,6 +9511,7 @@ class League_Stats(object):
     
     def end_year(self):
         self.this_year += 1
+        #self.get_retired()     
         for button in self.buttons:
             if button.category == "YEAR" and not button.do == "THIS YEAR":
                 if button.x > 1500:
@@ -9445,6 +9520,7 @@ class League_Stats(object):
                 else:
                     button.x += 75
         self.buttons.append(Button(405, 150, 75, 25, self.this_year - 1, self.this_year - 1, "YEAR"))
+        self.cut_extras()
     
     def reset_buttons(self):
         for button in self.buttons:
@@ -9745,7 +9821,6 @@ class League_Stats(object):
         
     def add_players(self, players):
         self.all_players.extend(players)
-        self.get_retired()
         
     def update_all_players(self, season1):
         self.all_teams = []
@@ -9757,20 +9832,15 @@ class League_Stats(object):
             for player in team.Players:
                 if not (player in self.all_players):
                     self.all_players.append(player)
-        self.get_retired()     
-        self.cut_extras()
         
     def cut_extras(self):
-        min_att = 5
-        for player in self.all_players:
-            if player.retired:
-                is_important = False
-                for stat in ["THROW", "RECEIVE", "RUN", "BLOCK", "COVER", "BLITZ", "XP", "FG", "PUNT", "KICK OFF", "RETURN", "2pt"]:
-                    if player.has_stats_min_att("CAREER", type, 0, min_att, False):
-                        is_important = True
-                        break
-                if not is_important:
-                    self.players.remove(player)
+        #self.all_players = [player for player self.all_players if not (player.retired and player.total_xp < 5000)]
+        i=0
+        while i < len(self.all_players):
+            if self.all_players[i].retired and self.all_players[i].total_xp < 5000:
+                self.all_players.remove(self.all_players[i])
+            else:
+                i+=1
         
     def draw_leaders(self, x, y, buttons = "SELF", scope = "", positions = [], stats = [], num_leaders = 10, min_attempts = 1, teams = [], rounds = [], is_drafted_team = False, add_on_stat = "", this_year = "SELF", show_players = True):
         if buttons == "SELF":
@@ -9829,6 +9899,7 @@ class League_Stats(object):
             if stat in stats and show_players:
                 if not self.add_on_stat == "":
                     stat = self.add_on_stat + " " + stat
+                #players = [player for player in self.all_players if (player.has_stats_min_att(stat, self.numbers_scope, this_year, min_attempts) or stat in {"MISC", "OVERALL"}) and (player.position in positions or "ALL" in positions) and (player.draft_position[0] in rounds or 8 in rounds) and ((not is_drafted_team and player.team in teams or "ALL" in teams or ("ACTIVE" in teams and not player.team == "RETIRED")) or (is_drafted_team and (player.drafted_by in teams or "ALL" in teams)))]
                 players = []
                 for player in self.all_players:
                     if (player.has_stats_min_att(stat, self.numbers_scope, this_year, min_attempts) or stat in {"MISC", "OVERALL"}) and (player.position in positions or "ALL" in positions) and (player.draft_position[0] in rounds or 8 in rounds) and ((not is_drafted_team and player.team in teams or "ALL" in teams or ("ACTIVE" in teams and not player.team == "RETIRED")) or (is_drafted_team and (player.drafted_by in teams or "ALL" in teams))):
@@ -9851,9 +9922,10 @@ class League_Stats(object):
         return len(self.all_players)
     
     def count_players(self, pos):
+        #return sum((player.position==pos and not player.retired) for player in self.all_players)
         count = 0
         for player in self.all_players:
-            if player.position == pos and not player.retired:
+            if player.position==pos and not player.retired:
                 count += 1
         return count
     
@@ -10007,26 +10079,26 @@ class Constants(object):
         self.sack_avg =             6.7
         self.rating_sack_avg =      1.5
         self.sack_jump =            0.4
-        self.int_avg =              2.5
+        self.int_avg =              1.9
         self.int_jump =             0.1
-        self.complete_avg =         59.5
-        self.complete_jump =        0.4
+        self.complete_avg =         59.0
+        self.complete_jump =        0.38
         self.scramble_avg =         4.0
         self.scramble_jump =        0.5
-        self.air_yds_avg =          7.1
-        self.air_yds_jump =         0.15
+        self.air_yds_avg =          7.0
+        self.air_yds_jump =         0.13
         self.fumble_avg =           1.0
-        self.fumble_jump =          0.1
+        self.fumble_jump =          0.09
         self.drop_avg =             5.0
         self.drop_jump =            0.3
-        self.YAC_avg =              4.0
+        self.YAC_avg =              3.9
         self.YAC_jump =             0.15
-        self.run_avg =              4.25
+        self.run_avg =              4.10
         self.run_jump =             0.13
-        self.fg_range_avg =         54.0
+        self.fg_range_avg =         54.5
         self.rating_fg_range_avg =  30.0
-        self.fg_range_jump =        0.25
-        self.fg_chance_avg =        90.0
+        self.fg_range_jump =        0.26
+        self.fg_chance_avg =        90.5
         self.fg_chance_jump =       0.3
         self.punt_avg =             45.0
         self.rating_punt_avg =      35.0
@@ -10151,31 +10223,37 @@ class Constants(object):
             print("error: unknown stat in stat_xp - " + str(stat))
             return 0.0
         
-    def fatigue_calc(self, xp, pos, stamina):
+    def fatigue_calc(self, xp, pos, stamina, game_type):
         multip = 0
         if pos == "QB":
-            multip = 0.700
+            multip = 0.590
         elif pos == "WR":
-            multip = 2.000
-        elif pos == "RB":
-            multip = 2.000
-        elif pos == "TE":
             multip = 1.500
+        elif pos == "RB":
+            multip = 1.500
+        elif pos == "TE":
+            multip = 1.100
         elif pos == "OL":
-            multip = 5.000
+            multip = 4.400
         elif pos == "DL":
-            multip = 2.300
+            multip = 2.700
         elif pos == "LB":
-            multip = 0.700
-        elif pos == "DB":
             multip = 0.900
+        elif pos == "DB":
+            multip = 1.500
         elif pos == "K":
-            multip = 0.750
+            multip = 0.600
         elif pos == "RT":
-            multip = 1.000
+            multip = 0.800
         else:
             print("error: unknown position - " + str(pos))
             return 0.0
+        game_mul = self.game_xp_multiplier(game_type)
+        if game_mul == 0:
+            multip = 0
+        else:
+            multip /= game_mul
+        multip *= 0.5
         return max(0, xp*multip*0.01*(1-(0.1*stamina**1.2)/100.0))
         
         
